@@ -1,0 +1,109 @@
+[{
+  "id": "M001",
+  "name": "The Last Horizon",
+  "title": "The Last Horizon",
+  "description": "An epic sci-fi adventure about humanity’s survival on a new planet.",
+  "category": ["Action", "Adventure", "Sci-Fi"],
+  "trailerLink": "https://youtube.com/trailer123",
+  "teaserLink": "https://youtube.com/teaser123",
+  "type": "Movie", 
+  "ratings": {
+    "imdb": 8.5,
+    "google": 92,
+    "rottenTomato": 88,
+    "review4All": 4.3
+  },
+  "streamingInfo": "Available in 4K HDR",
+  "movieReleaseDate": "2025-05-20",
+  "ottReleaseDate": "2025-07-15",
+  "ottExpectedReleaseDate": "2025-07-10",
+  "ottStreamingAt": "Netflix",
+  "excitementLevel": 95,
+  "performanceMeter": "High",
+  "budget": 200000000,
+  "earnings": 950000000,
+  "ticketPrice": "$15 - $45",
+  "criticsScore": 85,
+  "audienceScore": 90,
+  "boxOfficeScore": 88,
+  "socialBuzz": "Trending Worldwide",
+
+  "boxOfficeTrends": {
+    "daily": {
+      "day1": 12000000,
+      "day2": 15000000,
+      "day14": 2500000
+    },
+    "weekly": {
+      "week1": 55000000,
+      "week2": 30000000,
+      "week6": 5000000
+    },
+    "monthly": {
+      "month1": 100000000,
+      "month2": 75000000,
+      "month3": 40000000,
+      "month4": 15000000
+    }
+  },
+
+  "funFacts": [
+    {
+      "title": "Record-Breaking Opening",
+      "description": "The movie made history with the highest opening weekend in 2025.",
+      "image": "https://imageurl.com/news1.jpg",
+      "source": "Variety",
+      "sourceLink": "https://variety.com/movie-news1"
+    },
+    {
+      "title": "Behind the Scenes",
+      "description": "Shot entirely on location in Iceland.",
+      "image": "https://imageurl.com/news2.jpg",
+      "source": "Hollywood Reporter",
+      "sourceLink": "https://hollywoodreporter.com/news2"
+    }
+  ],
+  "RelatedNews" [
+    {
+      "title": "Record-Breaking Opening",
+      "description": "The movie made history with the highest opening weekend in 2025.",
+      "image": "https://imageurl.com/news1.jpg",
+      "source": "Variety",
+      "sourceLink": "https://variety.com/movie-news1"
+    },
+    {
+      "title": "Behind the Scenes",
+      "description": "Shot entirely on location in Iceland.",
+      "image": "https://imageurl.com/news2.jpg",
+      "source": "Hollywood Reporter",
+      "sourceLink": "https://hollywoodreporter.com/news2"
+    }
+  ],
+
+  "soundtracks": [
+    {
+      "image": "https://imageurl.com/sound1.jpg",
+      "title": "Echoes of Tomorrow",
+      "releaseDate": "2025-05-01",
+      "sungBy": "John Legend",
+      "streamTimes": 20000000,
+      "videoPlayedViews": 15000000,
+      "earned": 1000000
+    },
+    {
+      "image": "https://imageurl.com/sound2.jpg",
+      "title": "Rise Beyond",
+      "releaseDate": "2025-05-10",
+      "sungBy": "Adele",
+      "streamTimes": 35000000,
+      "videoPlayedViews": 25000000,
+      "earned": 2000000
+    }
+  ],
+ "status": "Active",
+  "createdDate": "2025-08-27T18:30:00Z",
+  "updatedDate": "2025-08-27T18:30:00Z"
+}
+
+
+]
