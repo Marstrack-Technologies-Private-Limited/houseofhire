@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Loader2, FileSignature, Eye, Search } from "lucide-react";
+import { MoreHorizontal, Loader2, FileSignature, Eye, Search, File } from "lucide-react";
 import { OfferLetterDialog } from "@/components/offer-letter-dialog";
 import { format } from "date-fns";
 import { useSearchParams } from "next/navigation";
@@ -31,6 +31,7 @@ import { CandidateProfileDialog } from "@/components/candidate-profile-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -45,6 +46,7 @@ interface Application {
     APPLIEDDATE: string;
     STATUS: string;
     REQUESTNO: number;
+    CVATTACHED?: string;
 }
 
 export default function RecruiterApplicationsPage() {
@@ -93,6 +95,7 @@ export default function RecruiterApplicationsPage() {
               APPLIEDDATE: app.DATEOFAPPLICATION,
               STATUS: app.STATUSOFAPPLICATION,
               REQUESTNO: app.REQUESTNO,
+              CVATTACHED: app.CVATTACHED,
           }
       });
       
@@ -231,6 +234,7 @@ export default function RecruiterApplicationsPage() {
                 <TableHead>Job Title</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Applied On</TableHead>
+                <TableHead>CV</TableHead>
                 <TableHead>Profile</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -249,6 +253,18 @@ export default function RecruiterApplicationsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>{app.APPLIEDDATE ? format(new Date(app.APPLIEDDATE), "PPP") : 'N/A'}</TableCell>
+                  <TableCell>
+                    {app.CVATTACHED ? (
+                      <Button asChild variant="ghost" size="icon">
+                        <Link href={app.CVATTACHED} target="_blank">
+                          <File className="h-4 w-4" />
+                          <span className="sr-only">View CV</span>
+                        </Link>
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">N/A</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => setViewingCandidateId(app.JOBSEEKERREGNO)}>
                         <Eye className="h-4 w-4" />

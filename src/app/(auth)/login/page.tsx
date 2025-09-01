@@ -18,7 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 
 const BASEURL_GLOBAL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email) {
@@ -50,13 +51,13 @@ export default function LoginPage() {
       let response;
       if (loginAs === "recruiter") {
         response = await axios.get(
-          `${BASEURL_GLOBAL}/globalViewHandler?viewname=521&EMAILADDRESS=${email}&RECRUITERPASSWORD=${password}&VERIFIED=true`,
+          `${BASEURL_GLOBAL}/globalViewHandler?viewname=521&EMAILADDRESS=${email}&RECRUITERPASSWORD=${password}`, // &VERIFIED=true
           { headers: { "session-token": BASEURL_SESSION_TOKEN } }
         );
       } else {
         // Default to Job Seeker
         response = await axios.get(
-          `${BASEURL_GLOBAL}/globalViewHandler?viewname=1154&EMAILADDRESS=${email}&PASSWORD=${password}&VERIFIED=true`,
+          `${BASEURL_GLOBAL}/globalViewHandler?viewname=1154&EMAILADDRESS=${email}&PASSWORD=${password}`, // &VERIFIED=true
           { headers: { "session-token": BASEURL_SESSION_TOKEN } }
         );
       }
@@ -133,14 +134,25 @@ export default function LoginPage() {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="password">Password</Label>
-          <Input 
-            id="password" 
-            type="password" 
-            required 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            />
+          <div className="relative">
+            <Input 
+              id="password" 
+              type={showPassword ? "text" : "password"} 
+              required 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              />
+               <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </Button>
+          </div>
         </div>
          {serverError && <p className="text-sm font-medium text-destructive">{serverError}</p>}
       </CardContent>

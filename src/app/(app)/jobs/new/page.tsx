@@ -314,8 +314,8 @@ export default function NewJobPage() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {cities.map(city => (
-                                            <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
+                                        {cities.map((city, index) => (
+                                            <SelectItem key={`${city.name}-${city.stateCode}-${index}`} value={city.name}>{city.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

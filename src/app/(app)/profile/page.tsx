@@ -10,8 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -23,14 +24,28 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState } from "react";
-import { Eye, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Eye, EyeOff, Loader2, Badge } from "lucide-react";
 import axios from "axios";
 import { Separator } from "@/components/ui/separator";
 import type { UserRole } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import Link from "next/link";
+import { deactivateSeekerAccountAction, updateSeekerProfileAction } from "@/actions/seeker-actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useRouter } from "next/navigation";
+import { Country, City, ICountry, ICity } from 'country-state-city';
 
 
 const recruiterFormSchema = z.object({
@@ -254,229 +269,431 @@ const RecruiterProfileForm = () => {
 
 const SeekerProfileForm = () => {
     const { toast } = useToast();
+    const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [deactivationReason, setDeactivationReason] = useState("");
+    const [otherReason, setOtherReason] = useState("");
+    const [isDeactivating, setIsDeactivating] = useState(false);
+    const [countries, setCountries] = useState<ICountry[]>([]);
+    const [cities, setCities] = useState<ICity[]>([]);
 
     const form = useForm<z.infer<typeof seekerFormSchema>>({
         resolver: zodResolver(seekerFormSchema),
         defaultValues: {},
     });
 
+    const resetFormWithUserData = useCallback((userData: any) => {
+        const dob = userData.DOB ? parseISO(userData.DOB) : null;
+        const leftDate = userData.LASTCOMPANYLEFTDATE ? parseISO(userData.LASTCOMPANYLEFTDATE) : null;
+        const countryData = Country.getAllCountries().find(c => c.name === userData.COUNTRYRESIDENCE);
+
+        form.reset({
+            firstName: userData.JOBSEEKERNAME || "",
+            middleName: userData.MIDDLENAME || "",
+            lastName: userData.LASTNAME || "",
+            addressDetails: userData.ADDRESSDETAILS || "",
+            mobileNumber: userData.MOBILENO || "",
+            dob: dob && isValid(dob) ? format(dob, 'yyyy-MM-dd') : '',
+            nationality: userData.NATIONALITY || "",
+            city: userData.CITY || "",
+            countryOfResidence: countryData?.isoCode || "",
+            tribe: userData.TRIBE || "",
+            drivingLicenseNo: userData.LICENSENO || "",
+            nationalIdNumber: userData.NATIONALID || "",
+            passportNumber: userData.PASSPORTNO || "",
+            lastCompany: userData.PREVIOUSCOMPANY || "",
+            reasonOfLeaving: userData.REASONOFLEAVING || "",
+            specialization: userData.SPECIALIZATION || "",
+            maxQualification: userData.QUALIFICATION || "",
+            experienceLevel: userData.EXPERIENCELEVEL || "",
+            lastCompanyLeftDate: leftDate && isValid(leftDate) ? format(leftDate, 'yyyy-MM-dd') : '',
+        });
+
+        if (countryData?.isoCode) {
+            setCities(City.getCitiesOfCountry(countryData.isoCode) || []);
+            // Set city value again after cities are loaded
+            form.setValue('city', userData.CITY || "");
+        } else {
+            setCities([]);
+        }
+    }, [form]);
+
+
      useEffect(() => {
+        setCountries(Country.getAllCountries());
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             const userData = JSON.parse(storedUser);
             setCurrentUser(userData);
-            form.reset({
-                firstName: userData.JOBSEEKERNAME,
-                middleName: userData.MIDDLENAME,
-                lastName: userData.LASTNAME,
-                addressDetails: userData.ADDRESSDETAILS,
-                mobileNumber: userData.MOBILENO,
-                dob: userData.DOB ? format(new Date(userData.DOB), 'yyyy-MM-dd') : '',
-                nationality: userData.NATIONALITY,
-                city: userData.CITY,
-                countryOfResidence: userData.COUNTRYRESIDENCE,
-                tribe: userData.TRIBE,
-                drivingLicenseNo: userData.LICENSENO,
-                nationalIdNumber: userData.NATIONALID,
-                passportNumber: userData.PASSPORTNO,
-                lastCompany: userData.PREVIOUSCOMPANY,
-                reasonOfLeaving: userData.REASONOFLEAVING,
-                specialization: userData.SPECIALIZATION,
-                maxQualification: userData.QUALIFICATION,
-                experienceLevel: userData.EXPERIENCELEVEL,
-                lastCompanyLeftDate: userData.LASTCOMPANYLEFTDATE ? format(new Date(userData.LASTCOMPANYLEFTDATE), 'yyyy-MM-dd') : '',
-            });
+            resetFormWithUserData(userData);
         }
-    }, [form]);
+    }, [resetFormWithUserData]);
     
     async function onSubmit(values: z.infer<typeof seekerFormSchema>) {
+        if (!currentUser) {
+            toast({ title: "Error", description: "User data not found.", variant: "destructive" });
+            return;
+        }
         setIsSubmitting(true);
-        console.log("Updating seeker profile with:", values);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast({ title: "Success", description: "Profile updated successfully!" });
+        const result = await updateSeekerProfileAction({
+            ...values,
+            jobSeekerRegNo: currentUser.JOBSEEKERREGNO,
+            currentUser,
+        });
+
+        if(result.success && result.data) {
+            toast({ title: "Success", description: "Profile updated successfully!" });
+            const updatedUser = { ...currentUser, ...result.data };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setCurrentUser(updatedUser);
+            resetFormWithUserData(updatedUser);
+        } else {
+             toast({ title: "Update Failed", description: result.message, variant: "destructive" });
+        }
         setIsSubmitting(false);
     }
     
-    if (!currentUser) return <div>Loading profile...</div>
+    const handleDeactivate = async () => {
+        const reasonsMap: { [key: string]: string } = {
+          found_careerlink: "I found a job through CareerLink",
+          found_elsewhere: "I found a job elsewhere",
+          not_looking: "I am no longer looking for a job",
+          other: "Other",
+        };
+        const finalReason = deactivationReason === 'other' ? otherReason : reasonsMap[deactivationReason];
+
+        if (!finalReason) {
+            toast({ title: "Error", description: "Please provide a reason for deactivation.", variant: "destructive" });
+            return;
+        }
+        setIsDeactivating(true);
+        const result = await deactivateSeekerAccountAction({
+            jobSeekerRegNo: currentUser.JOBSEEKERREGNO,
+            reason: finalReason,
+        });
+
+        if(result.success) {
+            toast({ title: "Account Deactivated", description: "Your account has been deactivated." });
+            localStorage.removeItem('user');
+            router.push('/login');
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+        setIsDeactivating(false);
+    };
+
+    const handleCountryChange = (countryIsoCode: string) => {
+        form.setValue("countryOfResidence", countryIsoCode);
+        const countryCities = City.getCitiesOfCountry(countryIsoCode);
+        setCities(countryCities || []);
+        form.setValue("city", "");
+    };
+    
+    if (!currentUser) {
+        return (
+             <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-12 w-12 animate-spin" />
+            </div>
+        )
+    }
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Keep your personal and professional details up to date.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <h3 className="text-lg font-semibold border-b pb-2">Personal Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                             <FormField control={form.control} name="firstName" render={({ field }) => (
-                                <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="middleName" render={({ field }) => (
-                                <FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="lastName" render={({ field }) => (
-                                <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="dob" render={({ field }) => (
-                                <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="nationality" render={({ field }) => (
-                                <FormItem><FormLabel>Nationality</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="tribe" render={({ field }) => (
-                                <FormItem><FormLabel>Tribe/Cast</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
+        <>
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Personal Information</CardTitle>
+                            <CardDescription>Keep your personal and professional details up to date.</CardDescription>
                         </div>
-                        
-                        <h3 className="text-lg font-semibold border-b pb-2 pt-4">Contact Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <FormItem>
-                                <FormLabel>Email Address (Read-only)</FormLabel>
-                                <FormControl><Input value={currentUser.EMAILADDRESS} readOnly disabled /></FormControl>
-                            </FormItem>
-                             <FormField control={form.control} name="mobileNumber" render={({ field }) => (
-                                <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="countryOfResidence" render={({ field }) => (
-                                <FormItem><FormLabel>Country of Residence</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="city" render={({ field }) => (
-                                <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
+                        <div className="flex items-center gap-2">
+                             <span className="text-sm font-medium">Account Status:</span>
+                             <Badge variant={currentUser.OM_JOB_SEEKER_INACTIVATE ? "destructive" : "default"}>
+                                {currentUser.OM_JOB_SEEKER_INACTIVATE ? 'Inactive' : 'Active'}
+                             </Badge>
                         </div>
-                         <FormField control={form.control} name="addressDetails" render={({ field }) => (
-                            <FormItem><FormLabel>Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-
-                        <h3 className="text-lg font-semibold border-b pb-2 pt-4">Professional Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FormField control={form.control} name="specialization" render={({ field }) => (
-                                <FormItem><FormLabel>Specialization</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="maxQualification" render={({ field }) => (
-                                <FormItem><FormLabel>Highest Qualification</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="experienceLevel" render={({ field }) => (
-                                 <FormItem>
-                                <FormLabel>Experience Level</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Entry-Level">Entry-Level</SelectItem>
-                                        <SelectItem value="Mid-Level">Mid-Level</SelectItem>
-                                        <SelectItem value="Senior-Level">Senior-Level</SelectItem>
-                                        <SelectItem value="Expert">Expert</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <h3 className="text-lg font-semibold border-b pb-2">Personal Details</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <FormField control={form.control} name="firstName" render={({ field }) => (
+                                    <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="middleName" render={({ field }) => (
+                                    <FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="lastName" render={({ field }) => (
+                                    <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="dob" render={({ field }) => (
+                                    <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="nationality" render={({ field }) => (
+                                    <FormItem><FormLabel>Nationality</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="tribe" render={({ field }) => (
+                                    <FormItem><FormLabel>Tribe/Cast</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            </div>
+                            
+                            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Contact Information</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormItem>
+                                    <FormLabel>Email Address (Read-only)</FormLabel>
+                                    <FormControl><Input value={currentUser.EMAILADDRESS} readOnly disabled /></FormControl>
                                 </FormItem>
+                                <FormField control={form.control} name="mobileNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField
+                                    control={form.control}
+                                    name="countryOfResidence"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Country of Residence</FormLabel>
+                                        <Select onValueChange={(value) => handleCountryChange(value)} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                <SelectValue placeholder="Select a country" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {countries.map(country => (
+                                                    <SelectItem key={country.isoCode} value={country.isoCode}>{country.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="city"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>City</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                <SelectValue placeholder="Select a city" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {cities.map((city, index) => (
+                                                    <SelectItem key={`${city.name}-${city.stateCode}-${index}`} value={city.name}>{city.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <FormField control={form.control} name="addressDetails" render={({ field }) => (
+                                <FormItem><FormLabel>Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                             )}/>
-                             <FormField control={form.control} name="lastCompany" render={({ field }) => (
-                                <FormItem><FormLabel>Previous Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="lastCompanyLeftDate" render={({ field }) => (
-                                <FormItem><FormLabel>Date Left</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="reasonOfLeaving" render={({ field }) => (
-                                <FormItem><FormLabel>Reason For Leaving</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                        </div>
 
-                         <h3 className="text-lg font-semibold border-b pb-2 pt-4">Identification</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FormField control={form.control} name="nationalIdNumber" render={({ field }) => (
-                                <FormItem><FormLabel>National ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="passportNumber" render={({ field }) => (
-                                <FormItem><FormLabel>Passport No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                             <FormField control={form.control} name="drivingLicenseNo" render={({ field }) => (
-                                <FormItem><FormLabel>Driving License No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                        </div>
-                        
-                        <h3 className="text-lg font-semibold border-b pb-2 pt-4">Documents</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           {currentUser.PHOTOATTACHMENT && (
-                           <FormItem>
-                                <FormLabel>Photo</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.PHOTOATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.PHOTOATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                           {currentUser.LICENSEATTACHMENT && (
-                            <FormItem>
-                                <FormLabel>Driving License</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.LICENSEATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.LICENSEATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                           {currentUser.NATIONAIDATTACHMENT && (
-                            <FormItem>
-                                <FormLabel>National ID</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.NATIONAIDATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.NATIONAIDATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                           {currentUser.PASSPORTATTACHMENT && (
-                            <FormItem>
-                                <FormLabel>Passport</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.PASSPORTATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.PASSPORTATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                           {currentUser.RECOMMENDATIONLETTERATTACHMENT && (
-                            <FormItem>
-                                <FormLabel>Recommendation Letter</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.RECOMMENDATIONLETTERATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.RECOMMENDATIONLETTERATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                           {currentUser.NOCATTACHMENT && (
-                            <FormItem>
-                                <FormLabel>No Objection Certificate (NOC)</FormLabel>
-                                <div className="flex items-center gap-2">
-                                <Input value={currentUser.NOCATTACHMENT} readOnly disabled />
-                                <Button asChild variant="outline" size="icon">
-                                    <Link href={currentUser.NOCATTACHMENT} target="_blank"><Eye /></Link>
-                                </Button>
-                                </div>
-                            </FormItem>
-                           )}
-                        </div>
+                            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Professional Details</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <FormField control={form.control} name="specialization" render={({ field }) => (
+                                    <FormItem><FormLabel>Specialization</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="maxQualification" render={({ field }) => (
+                                    <FormItem><FormLabel>Highest Qualification</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="experienceLevel" render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Experience Level</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Entry-Level">Entry-Level</SelectItem>
+                                            <SelectItem value="Mid-Level">Mid-Level</SelectItem>
+                                            <SelectItem value="Senior-Level">Senior-Level</SelectItem>
+                                            <SelectItem value="Expert">Expert</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={form.control} name="lastCompany" render={({ field }) => (
+                                    <FormItem><FormLabel>Previous Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="lastCompanyLeftDate" render={({ field }) => (
+                                    <FormItem><FormLabel>Date Left</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="reasonOfLeaving" render={({ field }) => (
+                                    <FormItem><FormLabel>Reason For Leaving</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            </div>
 
+                            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Identification</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <FormField control={form.control} name="nationalIdNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>National ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="passportNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>Passport No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="drivingLicenseNo" render={({ field }) => (
+                                    <FormItem><FormLabel>Driving License No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            </div>
+                            
+                            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Documents (Read-only)</h3>
+                            <p className="text-sm text-muted-foreground">To update documents, please re-upload them through a new registration process.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {currentUser.OM_JOB_SEEKER_CV_ATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>CV / Resume</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.OM_JOB_SEEKER_CV_ATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.OM_JOB_SEEKER_CV_ATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.PHOTOATTACHMENT && (
+                            <FormItem>
+                                    <FormLabel>Photo</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.PHOTOATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.PHOTOATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.LICENSEATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>Driving License</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.LICENSEATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.LICENSEATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.NATIONAIDATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>National ID</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.NATIONAIDATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.NATIONAIDATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.PASSPORTATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>Passport</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.PASSPORTATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.PASSPORTATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.RECOMMENDATIONLETTERATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>Recommendation Letter</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.RECOMMENDATIONLETTERATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.RECOMMENDATIONLETTERATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            {currentUser.NOCATTACHMENT && (
+                                <FormItem>
+                                    <FormLabel>No Objection Certificate (NOC)</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                    <Input value={currentUser.NOCATTACHMENT} readOnly disabled />
+                                    <Button asChild variant="outline" size="icon">
+                                        <Link href={currentUser.NOCATTACHMENT} target="_blank"><Eye /></Link>
+                                    </Button>
+                                    </div>
+                                </FormItem>
+                            )}
+                            </div>
 
-                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
-                        </Button>
-                    </form>
-                 </Form>
-            </CardContent>
-        </Card>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+            
+            <Card className="border-destructive mt-6">
+                <CardHeader>
+                    <CardTitle>Deactivate Account</CardTitle>
+                    <CardDescription>
+                        This action is irreversible. Your profile and application history will be permanently removed.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="deactivation-reason">Reason for leaving</Label>
+                        <Select onValueChange={setDeactivationReason} value={deactivationReason}>
+                            <SelectTrigger id="deactivation-reason">
+                                <SelectValue placeholder="Select a reason..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="found_careerlink">I found a job through CareerLink</SelectItem>
+                                <SelectItem value="found_elsewhere">I found a job elsewhere</SelectItem>
+                                <SelectItem value="not_looking">I am no longer looking for a job</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    {deactivationReason === 'other' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="other-reason">Please specify your reason</Label>
+                            <Textarea 
+                                id="other-reason"
+                                value={otherReason}
+                                onChange={(e) => setOtherReason(e.target.value)}
+                                placeholder="Please provide details..."
+                            />
+                        </div>
+                    )}
+
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={!deactivationReason || (deactivationReason === 'other' && !otherReason) || isDeactivating}>
+                                {isDeactivating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Deactivate My Account
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently deactivate your
+                                account and remove your data from our servers.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeactivate} className="bg-destructive hover:bg-destructive/90">Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardContent>
+            </Card>
+        </>
     );
 };
 
@@ -484,6 +701,9 @@ const SeekerProfileForm = () => {
 const PasswordForm = () => {
     const { toast } = useToast();
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     
     const passwordForm = useForm<z.infer<typeof passwordFormSchema>>({
         resolver: zodResolver(passwordFormSchema),
@@ -511,13 +731,58 @@ const PasswordForm = () => {
                     <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <FormField control={passwordForm.control} name="currentPassword" render={({ field }) => (
-                                <FormItem><FormLabel>Current Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>Current Password</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input type={showCurrentPassword ? "text" : "password"} {...field} />
+                                             <Button
+                                                type="button" variant="ghost" size="icon"
+                                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            >
+                                                {showCurrentPassword ? <EyeOff /> : <Eye />}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}/>
                             <FormField control={passwordForm.control} name="newPassword" render={({ field }) => (
-                                <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem>
+                                    <FormLabel>New Password</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input type={showNewPassword ? "text" : "password"} {...field} />
+                                             <Button
+                                                type="button" variant="ghost" size="icon"
+                                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                            >
+                                                {showNewPassword ? <EyeOff /> : <Eye />}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}/>
                             <FormField control={passwordForm.control} name="confirmPassword" render={({ field }) => (
-                                <FormItem><FormLabel>Confirm New Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                               <FormItem>
+                                    <FormLabel>Confirm New Password</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input type={showConfirmPassword ? "text" : "password"} {...field} />
+                                             <Button
+                                                type="button" variant="ghost" size="icon"
+                                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            >
+                                                {showConfirmPassword ? <EyeOff /> : <Eye />}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}/>
                         </div>
                         <Button type="submit" disabled={isSubmittingPassword}>
@@ -527,11 +792,12 @@ const PasswordForm = () => {
                 </Form>
             </CardContent>
         </Card>
-    )
+    );
 }
 
 export default function ProfilePage() {
   const [role, setRole] = useState<UserRole | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -539,10 +805,21 @@ export default function ProfilePage() {
         const userData = JSON.parse(storedUser);
         setRole(userData.role);
     }
+    setIsLoading(false);
   }, []);
 
-  if (role === null) {
-      return <div>Loading...</div>; // Or a proper loading skeleton
+  useEffect(() => {
+    if(!isLoading && !role){
+        console.log("No user role found, finishing loading.");
+    }
+  }, [isLoading, role])
+
+  if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-12 w-12 animate-spin" />
+        </div>
+      );
   }
 
   const pageTitle = role === 'recruiter' ? "Recruiter Profile" : "Job Seeker Profile";

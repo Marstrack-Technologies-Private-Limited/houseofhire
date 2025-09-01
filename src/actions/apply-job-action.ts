@@ -9,16 +9,34 @@ const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSIO
 const applyJobSchema = z.object({
   requestNo: z.number(),
   jobSeekerRegNo: z.number(),
+  coverLetter: z.string().url().optional(),
+  cvAttached: z.string().url(),
+  reasonFitForApplication: z.string().min(1, "Reason is required."),
 });
 
 type ApplyJobInput = z.infer<typeof applyJobSchema>;
+
+export async function uploadFileAction(formData: FormData) {
+    try {
+        const response = await axios.post(
+            "https://api.tech23.net/fileupload/uploadImage",
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+        );
+        return { success: true, url: response.data };
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        return { success: false, message: "File upload failed." };
+    }
+}
+
 
 export async function applyForJobAction(input: ApplyJobInput) {
     const validation = applyJobSchema.safeParse(input);
     if (!validation.success) {
         return { success: false, message: "Invalid input." };
     }
-    const { requestNo, jobSeekerRegNo } = validation.data;
+    const { requestNo, jobSeekerRegNo, coverLetter, cvAttached, reasonFitForApplication } = validation.data;
 
     try {
         // 1. Check if already applied
@@ -46,6 +64,9 @@ export async function applyForJobAction(input: ApplyJobInput) {
             APPLICATIONNO: Number(applicationNo),
             REQUESTNO: Number(requestNo),
             JOBSEEKERREGNO: Number(jobSeekerRegNo),
+            COVERLETTER: coverLetter || "",
+            CVATTACHED: cvAttached,
+            REASONFITFORAPPLICATION: reasonFitForApplication,
             SUCCESS_STATUS: "",
             ERROR_STATUS: "",
         };

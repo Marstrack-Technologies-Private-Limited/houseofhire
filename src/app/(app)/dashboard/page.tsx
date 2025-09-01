@@ -219,8 +219,8 @@ const SeekerDashboard = ({ currentUser }: { currentUser: any }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {applications.map(app => (
-                <TableRow key={app.APPLICATIONNO}>
+              {applications.map((app, index) => (
+                <TableRow key={`${app.APPLICATIONNO}-${index}`}>
                   <TableCell className="font-medium">{app.DESIGNATION}</TableCell>
                   <TableCell>{app.RECRUITERCOMPANYNAME}</TableCell>
                   <TableCell><Badge variant={app.STATUSOFAPPLICATION === "ACCEPTED" ? "default" : "secondary"}>{app.STATUSOFAPPLICATION || 'APPLIED'}</Badge></TableCell>

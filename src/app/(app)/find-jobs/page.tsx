@@ -15,9 +15,9 @@ import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { applyForJobAction } from "@/actions/apply-job-action";
 import { TrackApplicationDialog } from "@/components/track-application-dialog";
 import { Input } from "@/components/ui/input";
+import { ApplyJobDialog } from "@/components/apply-job-dialog";
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -36,7 +36,7 @@ interface Job {
 export default function FindJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isApplying, setIsApplying] = useState<number | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isTracking, setIsTracking] = useState<number | null>(null);
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -74,20 +74,10 @@ export default function FindJobsPage() {
     };
     fetchJobs();
   }, [toast]);
-  
-  const handleApply = async (requestNo: number) => {
-      if (!currentUser?.JOBSEEKERREGNO) {
-          toast({ title: "Error", description: "You must be logged in to apply.", variant: "destructive" });
-          return;
-      }
-      setIsApplying(requestNo);
-      const result = await applyForJobAction({ requestNo, jobSeekerRegNo: currentUser.JOBSEEKERREGNO });
-       if (result.success) {
-           toast({ title: "Success", description: result.message });
-       } else {
-            toast({ title: "Error", description: result.message, variant: "destructive" });
-       }
-      setIsApplying(null);
+
+  const handleApplySuccess = () => {
+    toast({ title: "Success", description: "Job application submitted successfully!" });
+    setSelectedJob(null);
   }
   
   const filteredJobs = useMemo(() => {
@@ -142,8 +132,8 @@ export default function FindJobsPage() {
               <CardFooter className="flex flex-col items-start gap-2">
                  <p className="text-xs text-muted-foreground"><strong>Application Deadline:</strong> {format(new Date(job.DEADLINEDATE), 'PPP')}</p>
                  <div className="flex w-full gap-2">
-                    <Button className="w-full" onClick={() => handleApply(job.REQUESTNO)} disabled={isApplying === job.REQUESTNO}>
-                        {isApplying === job.REQUESTNO ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</> : "Apply Now"}
+                    <Button className="w-full" onClick={() => setSelectedJob(job)}>
+                        Apply Now
                     </Button>
                     <Button variant="secondary" className="w-full" onClick={() => setIsTracking(job.REQUESTNO)}>
                         Track Application
@@ -162,6 +152,14 @@ export default function FindJobsPage() {
             onClose={() => setIsTracking(null)}
         />
     )}
+     {selectedJob && currentUser?.JOBSEEKERREGNO && (
+        <ApplyJobDialog
+          job={selectedJob}
+          jobSeekerRegNo={currentUser.JOBSEEKERREGNO}
+          onClose={() => setSelectedJob(null)}
+          onApplySuccess={handleApplySuccess}
+        />
+      )}
     </>
   );
 }

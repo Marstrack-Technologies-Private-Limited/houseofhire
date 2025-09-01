@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,6 +76,9 @@ export default function RecruiterRegisterPage() {
   const [otp, setOtp] = useState<number | null>(null);
   const [enteredOtp, setEnteredOtp] = useState("");
   const [isOtpVerifying, setIsOtpVerifying] = useState(false);
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -386,8 +390,8 @@ export default function RecruiterRegisterPage() {
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {cities.map(city => (
-                                    <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
+                                {cities.map((city, index) => (
+                                    <SelectItem key={`${city.name}-${city.stateCode}-${index}`} value={city.name}>{city.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -529,7 +533,18 @@ export default function RecruiterRegisterPage() {
                         <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                            <Input type="password" {...field} />
+                          <div className="relative">
+                            <Input type={showPassword ? 'text' : 'password'} {...field} />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -542,7 +557,18 @@ export default function RecruiterRegisterPage() {
                         <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                            <Input type="password" {...field} />
+                           <div className="relative">
+                            <Input type={showConfirmPassword ? 'text' : 'password'} {...field} />
+                             <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                              {showConfirmPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                         </FormItem>

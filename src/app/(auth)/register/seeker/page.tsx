@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,6 +70,7 @@ const formSchema = z.object({
     recommendationLetter: z.any().refine(file => file?.length == 1, "Recommendation letter is required"),
     noObjectionCertificate: z.any().refine(file => file?.length == 1, "NOC is required"),
     photoAttachment: z.any().refine(file => file?.length == 1, "Photo is required"),
+    cvAttachment: z.any().refine(file => file?.length == 1, "CV attachment is required"),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
@@ -86,6 +88,9 @@ export default function SeekerRegisterPage() {
   const [otp, setOtp] = useState<number | null>(null);
   const [enteredOtp, setEnteredOtp] = useState("");
   const [isOtpVerifying, setIsOtpVerifying] = useState(false);
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -252,14 +257,16 @@ export default function SeekerRegisterPage() {
         passportString,
         recommendationString,
         nocString,
-        photoString
+        photoString,
+        cvString,
       ] = await Promise.all([
         uploadImage(values.licenseAttachment[0]),
         uploadImage(values.nationalIdAttachment[0]),
         uploadImage(values.passportAttachment[0]),
         uploadImage(values.recommendationLetter[0]),
         uploadImage(values.noObjectionCertificate[0]),
-        uploadImage(values.photoAttachment[0])
+        uploadImage(values.photoAttachment[0]),
+        uploadImage(values.cvAttachment[0]),
       ]);
       
       const payload = {
@@ -291,6 +298,10 @@ export default function SeekerRegisterPage() {
         NOCATTACHMENT: nocString,
         PHOTOATTACHMENT: photoString,
         PASSWORD: values.password,
+        CVATTACHMENT: cvString,
+        INACTIVATEACCOUNT: 0,
+        INACTIVATEREASON: "",
+        INACTIVATEDATETIME: null,
         SUCCESS_STATUS: "",
         ERROR_STATUS: "",
       };
@@ -485,8 +496,8 @@ export default function SeekerRegisterPage() {
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {cities.map(city => (
-                                    <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
+                                {cities.map((city, index) => (
+                                    <SelectItem key={`${city.name}-${city.stateCode}-${index}`} value={city.name}>{city.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -627,7 +638,20 @@ export default function SeekerRegisterPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Password</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl>
+                             <div className="relative">
+                                <Input type={showPassword ? 'text' : 'password'} {...field} />
+                                <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                onClick={() => setShowPassword(!showPassword)}
+                                >
+                                {showPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -638,7 +662,20 @@ export default function SeekerRegisterPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl>
+                             <div className="relative">
+                                <Input type={showConfirmPassword ? 'text' : 'password'} {...field} />
+                                <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                >
+                                {showConfirmPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -652,6 +689,13 @@ export default function SeekerRegisterPage() {
                     <FormItem>
                         <FormLabel>Your Photo</FormLabel>
                         <FormControl><Input type="file" accept="image/*" {...form.register("photoAttachment")} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+                 <FormField control={form.control} name="cvAttachment" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>CV / Resume</FormLabel>
+                        <FormControl><Input type="file" accept=".pdf,.doc,.docx" {...form.register("cvAttachment")} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}/>
@@ -722,3 +766,7 @@ export default function SeekerRegisterPage() {
     </>
   );
 }
+
+    
+
+    

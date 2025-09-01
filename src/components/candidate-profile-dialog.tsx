@@ -52,6 +52,8 @@ interface CandidateDetails {
     PASSPORTATTACHMENT: string;
     RECOMMENDATIONLETTERATTACHMENT: string;
     NOCATTACHMENT: string;
+    OM_JOB_SEEKER_CV_ATTACHMENT?: string;
+    CVATTACHMENT?: string;
 }
 
 const DetailItem = ({ label, value }: { label: string, value: any }) => (
@@ -172,6 +174,7 @@ export function CandidateProfileDialog({
 
                     <h4 className="font-semibold text-lg">Documents</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <DocumentItem label="CV / Resume" url={candidateData.OM_JOB_SEEKER_CV_ATTACHMENT || candidateData.CVATTACHMENT} />
                        <DocumentItem label="Driving License" url={candidateData.LICENSEATTACHMENT} />
                        <DocumentItem label="National ID" url={candidateData.NATIONAIDATTACHMENT} />
                        <DocumentItem label="Passport" url={candidateData.PASSPORTATTACHMENT} />
