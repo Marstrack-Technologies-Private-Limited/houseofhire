@@ -29,12 +29,22 @@ import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
+
+const qualifications = [
+    { id: "Diploma", label: "Diploma" },
+    { id: "Bachelors Degree", label: "Bachelors Degree" },
+    { id: "Masters", label: "Masters" },
+    { id: "PHD", label: "PHD" },
+    { id: "Doctrate", label: "Doctrate" },
+]
 
 const formSchema = z.object({
   requestId: z.union([z.string(), z.number()]),
@@ -49,6 +59,11 @@ const formSchema = z.object({
   deadlineDate: z.string().min(1, "Please provide a deadline"),
   country: z.string().min(1, "Please select a country"),
   city: z.string().min(1, "Please select a city"),
+  typeOfContract: z.string().min(1, "Please select the type of contract"),
+  minQualification: z.array(z.string()).refine(value => value.some(item => item), {
+      message: "You have to select at least one qualification.",
+  }),
+  termsAndConditions: z.string().min(1, "Please provide terms and conditions"),
 });
 
 
@@ -65,7 +80,9 @@ export default function EditJobPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {},
+    defaultValues: {
+        minQualification: [],
+    },
   });
 
   useEffect(() => {
@@ -89,6 +106,8 @@ export default function EditJobPage() {
             const allCountries = Country.getAllCountries();
             const countryData = allCountries.find(c => c.name === jobData.COUNTRY);
             
+            const deadlineDate = jobData.DEADLINEDATE ? parseISO(jobData.DEADLINEDATE) : null;
+            
             form.reset({
                 requestId: jobData.REQUESTNO,
                 recruiterId: String(jobData.RECRUITERID),
@@ -99,13 +118,17 @@ export default function EditJobPage() {
                 designation: jobData.DESIGNATION,
                 requestStatus: jobData.REQUESTSTATUS,
                 experienceLevel: jobData.EXPERIENCELEVEL,
-                deadlineDate: format(new Date(jobData.DEADLINEDATE), 'yyyy-MM-dd'),
+                deadlineDate: deadlineDate && isValid(deadlineDate) ? format(deadlineDate, 'yyyy-MM-dd') : '',
                 country: countryData?.isoCode,
                 city: jobData.CITY,
+                typeOfContract: jobData.TYPEOFCONTRACT || "",
+                minQualification: jobData.MINQUALIFICATION ? jobData.MINQUALIFICATION.split(',').map((s:string) => s.trim()) : [],
+                termsAndConditions: jobData.TERMSANDCONDITIONS || "",
             });
 
             if(countryData) {
                 setCities(City.getCitiesOfCountry(countryData.isoCode) || []);
+                form.setValue('city', jobData.CITY);
             }
         } else {
              toast({ title: "Error", description: "Job not found.", variant: "destructive" });
@@ -137,7 +160,6 @@ export default function EditJobPage() {
   const joditConfig = useMemo(() => ({
     readonly: false,
     height: 300,
-    placeholder: "Enter the job description and responsibilities here..."
   }), []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -155,6 +177,9 @@ export default function EditJobPage() {
         DEADLINEDATE: values.deadlineDate,
         COUNTRY: Country.getCountryByCode(values.country)?.name,
         CITY: values.city,
+        TYPEOFCONTRACT: values.typeOfContract,
+        MINQUALIFICATION: values.minQualification.join(', '),
+        TERMSANDCONDITIONS: values.termsAndConditions,
         SUCCESS_STATUS: "",
         ERROR_STATUS: "",
       };
@@ -263,10 +288,11 @@ export default function EditJobPage() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Entry-Level">Entry-Level</SelectItem>
-                                        <SelectItem value="Mid-Level">Mid-Level</SelectItem>
-                                        <SelectItem value="Senior-Level">Senior-Level</SelectItem>
-                                        <SelectItem value="Expert">Expert</SelectItem>
+                                        <SelectItem value="No experience">No experience</SelectItem>
+                                        <SelectItem value="Internship and Graduate">Internship and Graduate</SelectItem>
+                                        <SelectItem value="Entry Level">Entry Level</SelectItem>
+                                        <SelectItem value="Mid Level">Mid Level</SelectItem>
+                                        <SelectItem value="Senior and Executive level">Senior and Executive level</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -353,24 +379,109 @@ export default function EditJobPage() {
                                 </FormItem>
                             )}
                         />
-                    </div>
-                    <FormField
+                        <FormField
                             control={form.control}
-                            name="narration"
+                            name="typeOfContract"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Job Description</FormLabel>
-                                <FormControl>
-                                   <JoditEditor
-                                        value={field.value}
-                                        config={joditConfig}
-                                        onBlur={newContent => field.onChange(newContent)}
-                                    />
-                                </FormControl>
+                                <FormLabel>Type of Contract</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Select contract type" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Permanent">Permanent</SelectItem>
+                                        <SelectItem value="Long Term Contract">Long Term Contract</SelectItem>
+                                        <SelectItem value="Labour">Labour</SelectItem>
+                                        <SelectItem value="Temporary Contract">Temporary Contract</SelectItem>
+                                        <SelectItem value="Consultancy">Consultancy</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
+
+                    <FormField
+                        control={form.control}
+                        name="minQualification"
+                        render={() => (
+                            <FormItem>
+                                <FormLabel>Minimum Qualifications</FormLabel>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                {qualifications.map((item) => (
+                                    <FormField
+                                    key={item.id}
+                                    control={form.control}
+                                    name="minQualification"
+                                    render={({ field }) => {
+                                        return (
+                                        <FormItem
+                                            key={item.id}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                        >
+                                            <FormControl>
+                                            <Checkbox
+                                                checked={field.value?.includes(item.id)}
+                                                onCheckedChange={(checked) => {
+                                                return checked
+                                                    ? field.onChange([...field.value, item.id])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                        (value) => value !== item.id
+                                                        )
+                                                    )
+                                                }}
+                                            />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                            {item.label}
+                                            </FormLabel>
+                                        </FormItem>
+                                        )
+                                    }}
+                                    />
+                                ))}
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="narration"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Job Description</FormLabel>
+                            <FormControl>
+                                <JoditEditor
+                                    value={field.value}
+                                    config={joditConfig}
+                                    onBlur={newContent => field.onChange(newContent)}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                     <FormField
+                        control={form.control}
+                        name="termsAndConditions"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Terms and Conditions</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Enter terms and conditions..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                     
                     <div className="flex justify-end gap-4">
                         <Button type="button" variant="outline" onClick={() => router.push('/jobs')}>Cancel</Button>
@@ -389,5 +500,3 @@ export default function EditJobPage() {
     </div>
   );
 }
-
-    

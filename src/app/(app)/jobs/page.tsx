@@ -17,6 +17,7 @@ import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -30,6 +31,7 @@ interface Job {
     DEADLINEDATE: string;
     REQUESTSTATUS: string;
     NARRATION: string;
+    TYPEOFCONTRACT?: string;
 }
 
 
@@ -123,7 +125,10 @@ export default function RecruiterJobsPage() {
           {filteredJobs.map((job, index) => (
             <Card key={`${job.REQUESTNO}-${index}`} className="flex flex-col">
               <CardHeader>
-                <CardTitle>{job.DESIGNATION}</CardTitle>
+                <div className="flex justify-between items-start">
+                    <CardTitle>{job.DESIGNATION}</CardTitle>
+                    {job.TYPEOFCONTRACT && <Badge variant="outline">{job.TYPEOFCONTRACT}</Badge>}
+                </div>
                 <CardDescription>
                   {job.CITY}, {job.COUNTRY}
                 </CardDescription>
@@ -151,3 +156,5 @@ export default function RecruiterJobsPage() {
     </div>
   );
 }
+
+    

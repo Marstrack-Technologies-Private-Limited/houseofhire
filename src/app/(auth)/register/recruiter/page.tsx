@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { OtpModal } from "@/components/otp-modal";
 import { emailTemplate } from "@/lib/email-template";
 import { useRouter } from "next/navigation";
+import { Switch } from "@/components/ui/switch";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -58,6 +59,7 @@ const formSchema = z.object({
     pinAttachment: z.any().refine(file => file?.length == 1, "Please Attach the Kra Pin"),
     taxCertificateAttachment: z.any().refine(file => file?.length == 1, "Please Attach the Tax Certification"),
     geoCoordinates: z.string().optional(),
+    recruiterSelfHiringProcess: z.boolean().default(false),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
@@ -97,7 +99,8 @@ export default function RecruiterRegisterPage() {
       specificRequirement: "",
       password: "",
       confirmPassword: "",
-      geoCoordinates: ""
+      geoCoordinates: "",
+      recruiterSelfHiringProcess: false,
     },
   });
 
@@ -292,6 +295,7 @@ export default function RecruiterRegisterPage() {
           COMPANYKRAPINATTACHMENT: kraPinString,
           COMPANYTAXCOMPLIANCEATTACHMENT: taxCertificateString,
           RECRUITERPASSWORD: values.password,
+          RECRUITERSELFHIRINGPROCESS: values.recruiterSelfHiringProcess ? 1 : 0,
           SUCCESS_STATUS: "",
           ERROR_STATUS: "",
       };
@@ -383,15 +387,15 @@ export default function RecruiterRegisterPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>City</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <Select onValueChange={field.onChange} value={field.value}>
                              <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a city" />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {cities.map((city, index) => (
-                                    <SelectItem key={`${city.name}-${city.stateCode}-${index}`} value={city.name}>{city.name}</SelectItem>
+                                {cities.map((city) => (
+                                    <SelectItem key={`${city.name}-${city.stateCode}`} value={city.name}>{city.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -525,6 +529,30 @@ export default function RecruiterRegisterPage() {
                         </FormItem>
                     )}
                 />
+            
+            <FormField
+                control={form.control}
+                name="recruiterSelfHiringProcess"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                        Enable Self-Hiring Process (Subscription Model)
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                        Turn this on to manage your own recruitment. If off, GBS will handle candidate hunting and shortlisting for you.
+                        </p>
+                    </div>
+                    <FormControl>
+                        <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    </FormItem>
+                )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                     control={form.control}
@@ -634,3 +662,7 @@ export default function RecruiterRegisterPage() {
     </>
   );
 }
+
+    
+
+    

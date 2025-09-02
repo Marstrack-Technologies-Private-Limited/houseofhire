@@ -1,19 +1,17 @@
 
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, Briefcase, FileText, Users, DollarSign, Loader2 } from 'lucide-react';
-import type { UserRole } from '@/lib/types';
 import axios from 'axios';
 import { format } from 'date-fns';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
-
 
 interface Application {
   APPLICATIONNO: number;
@@ -23,10 +21,58 @@ interface Application {
   STATUSOFAPPLICATION: string;
   DESIGNATION?: string;
   RECRUITERCOMPANYNAME?: string;
+  JOBSEEKERNAME?: string;
 }
 
+const RecruiterDashboard = ({ currentUser }: { currentUser: any }) => {
+    const [stats, setStats] = useState({ jobs: 0, applications: 0, shortlisted: 0, offered: 0 });
+    const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-const RecruiterDashboard = () => (
+    useEffect(() => {
+        if (!currentUser?.RECRUITERID) return;
+
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [jobsResponse, appsResponse, seekersResponse] = await Promise.all([
+                    axios.get(`${BASEURL}/globalViewHandler?viewname=1155&RECRUITERID=${currentUser.RECRUITERID}`, { headers: { "session-token": BASEURL_SESSION_TOKEN } }),
+                    axios.get(`${BASEURL}/globalViewHandler?viewname=1157&RECRUITERID=${currentUser.RECRUITERID}`, { headers: { "session-token": BASEURL_SESSION_TOKEN } }),
+                    axios.get(`${BASEURL}/globalViewHandler?viewname=1154`, { headers: { "session-token": BASEURL_SESSION_TOKEN } })
+                ]);
+                
+                const jobsData = jobsResponse.data || [];
+                const appsData = appsResponse.data || [];
+                const seekersMap = new Map(seekersResponse.data.map((s: any) => [s.JOBSEEKERREGNO, s.JOBSEEKERNAME]));
+                const jobsMap = new Map(jobsData.map((j: any) => [j.REQUESTNO, j.DESIGNATION]));
+
+                const newStats = {
+                    jobs: jobsData.length,
+                    applications: appsData.length,
+                    shortlisted: appsData.filter((a: any) => a.STATUSOFAPPLICATION === 'IN PROGRESS').length,
+                    offered: appsData.filter((a: any) => a.STATUSOFAPPLICATION === 'ACCEPTED').length,
+                };
+                setStats(newStats);
+
+                const enrichedApplications = appsData.map((app: any) => ({
+                    ...app,
+                    JOBSEEKERNAME: seekersMap.get(app.JOBSEEKERREGNO) || 'N/A',
+                    DESIGNATION: jobsMap.get(app.REQUESTNO) || 'N/A',
+                })).sort((a:any, b:any) => new Date(b.DATEOFAPPLICATION).getTime() - new Date(a.DATEOFAPPLICATION).getTime());
+
+                setRecentApplications(enrichedApplications.slice(0, 5));
+
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [currentUser]);
+    
+    return (
     <>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
@@ -35,8 +81,7 @@ const RecruiterDashboard = () => (
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+2 since last month</p>
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.jobs}</div>}
           </CardContent>
         </Card>
         <Card>
@@ -45,8 +90,7 @@ const RecruiterDashboard = () => (
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">245</div>
-            <p className="text-xs text-muted-foreground">+10 since last week</p>
+             {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.applications}</div>}
           </CardContent>
         </Card>
         <Card>
@@ -55,18 +99,16 @@ const RecruiterDashboard = () => (
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">15</div>
-            <p className="text-xs text-muted-foreground">+1 since yesterday</p>
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.shortlisted}</div>}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Offered</CardTitle>
+            <CardTitle className="text-sm font-medium">Offered / Accepted</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">1 new offer sent</p>
+             {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.offered}</div>}
           </CardContent>
         </Card>
       </div>
@@ -87,22 +129,37 @@ const RecruiterDashboard = () => (
           </Button>
         </CardHeader>
         <CardContent>
+           {isLoading ? (
+                <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Candidate</TableHead>
                 <TableHead>Job Title</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Applied</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              
+              {recentApplications.map((app, index) => (
+                  <TableRow key={`${app.APPLICATIONNO}-${index}`}>
+                      <TableCell className="font-medium">{app.JOBSEEKERNAME}</TableCell>
+                      <TableCell>{app.DESIGNATION}</TableCell>
+                      <TableCell><Badge variant="secondary">{app.STATUSOFAPPLICATION}</Badge></TableCell>
+                      <TableCell className="text-right">{format(new Date(app.DATEOFAPPLICATION), 'PPP')}</TableCell>
+                  </TableRow>
+              ))}
             </TableBody>
           </Table>
+            )}
         </CardContent>
       </Card>
     </>
-)
+    )
+}
 
 const SeekerDashboard = ({ currentUser }: { currentUser: any }) => {
     const [applications, setApplications] = useState<Application[]>([]);
@@ -269,7 +326,7 @@ export default function DashboardPage() {
                 </div>
             </div>
             
-            {currentUser.role === 'recruiter' ? <RecruiterDashboard /> : <SeekerDashboard currentUser={currentUser} />}
+            {currentUser.role === 'recruiter' ? <RecruiterDashboard currentUser={currentUser} /> : <SeekerDashboard currentUser={currentUser} />}
         </div>
     );
 }

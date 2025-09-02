@@ -29,13 +29,21 @@ import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
-
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
 
+const qualifications = [
+    { id: "Diploma", label: "Diploma" },
+    { id: "Bachelors Degree", label: "Bachelors Degree" },
+    { id: "Masters", label: "Masters" },
+    { id: "PHD", label: "PHD" },
+    { id: "Doctrate", label: "Doctrate" },
+]
 
 const formSchema = z.object({
   requestId: z.union([z.string(), z.number()]),
@@ -50,12 +58,13 @@ const formSchema = z.object({
   deadlineDate: z.string().min(1, "Please provide a deadline"),
   country: z.string().min(1, "Please select a country"),
   city: z.string().min(1, "Please select a city"),
+  typeOfContract: z.string().min(1, "Please select the type of contract"),
+  minQualification: z.array(z.string()).refine(value => value.some(item => item), {
+      message: "You have to select at least one qualification.",
+  }),
+  termsAndConditions: z.string().min(1, "Please provide terms and conditions"),
 });
 
-type Recruiter = {
-    RECRUITERID: number;
-    RECRUITERCOMPANYNAME: string;
-}
 
 export default function NewJobPage() {
   const { toast } = useToast();
@@ -80,6 +89,9 @@ export default function NewJobPage() {
       deadlineDate: "",
       country: "KE",
       city: "",
+      typeOfContract: "",
+      minQualification: [],
+      termsAndConditions: "",
     },
   });
 
@@ -146,6 +158,9 @@ export default function NewJobPage() {
         DEADLINEDATE: values.deadlineDate,
         COUNTRY: Country.getCountryByCode(values.country)?.name,
         CITY: values.city,
+        TYPEOFCONTRACT: values.typeOfContract,
+        MINQUALIFICATION: values.minQualification.join(', '),
+        TERMSANDCONDITIONS: values.termsAndConditions,
         SUCCESS_STATUS: "",
         ERROR_STATUS: "",
       };
@@ -246,10 +261,11 @@ export default function NewJobPage() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Entry-Level">Entry-Level</SelectItem>
-                                        <SelectItem value="Mid-Level">Mid-Level</SelectItem>
-                                        <SelectItem value="Senior-Level">Senior-Level</SelectItem>
-                                        <SelectItem value="Expert">Expert</SelectItem>
+                                        <SelectItem value="No experience">No experience</SelectItem>
+                                        <SelectItem value="Internship and Graduate">Internship and Graduate</SelectItem>
+                                        <SelectItem value="Entry Level">Entry Level</SelectItem>
+                                        <SelectItem value="Mid Level">Mid Level</SelectItem>
+                                        <SelectItem value="Senior and Executive level">Senior and Executive level</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -336,24 +352,110 @@ export default function NewJobPage() {
                                 </FormItem>
                             )}
                         />
-                    </div>
-                    <FormField
+                         <FormField
                             control={form.control}
-                            name="narration"
+                            name="typeOfContract"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Job Description</FormLabel>
-                                <FormControl>
-                                   <JoditEditor
-                                        value={field.value}
-                                        config={joditConfig}
-                                        onBlur={newContent => field.onChange(newContent)}
-                                    />
-                                </FormControl>
+                                <FormLabel>Type of Contract</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Select contract type" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Permanent">Permanent</SelectItem>
+                                        <SelectItem value="Long Term Contract">Long Term Contract</SelectItem>
+                                        <SelectItem value="Labour">Labour</SelectItem>
+                                        <SelectItem value="Temporary Contract">Temporary Contract</SelectItem>
+                                        <SelectItem value="Consultancy">Consultancy</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
+                    
+                     <FormField
+                        control={form.control}
+                        name="minQualification"
+                        render={() => (
+                            <FormItem>
+                                <FormLabel>Minimum Qualifications</FormLabel>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                {qualifications.map((item) => (
+                                    <FormField
+                                    key={item.id}
+                                    control={form.control}
+                                    name="minQualification"
+                                    render={({ field }) => {
+                                        return (
+                                        <FormItem
+                                            key={item.id}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                        >
+                                            <FormControl>
+                                            <Checkbox
+                                                checked={field.value?.includes(item.id)}
+                                                onCheckedChange={(checked) => {
+                                                return checked
+                                                    ? field.onChange([...(field.value || []), item.id])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                        (value) => value !== item.id
+                                                        )
+                                                    )
+                                                }}
+                                            />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                            {item.label}
+                                            </FormLabel>
+                                        </FormItem>
+                                        )
+                                    }}
+                                    />
+                                ))}
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+
+
+                    <FormField
+                        control={form.control}
+                        name="narration"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Job Description</FormLabel>
+                            <FormControl>
+                                <JoditEditor
+                                    value={field.value}
+                                    config={joditConfig}
+                                    onBlur={newContent => field.onChange(newContent)}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="termsAndConditions"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Terms and Conditions</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Enter terms and conditions..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                     
                     <div className="flex justify-end gap-4">
                         <Button type="button" variant="outline" onClick={() => router.push('/jobs')}>Cancel</Button>
@@ -372,5 +474,3 @@ export default function NewJobPage() {
     </div>
   );
 }
-
-    

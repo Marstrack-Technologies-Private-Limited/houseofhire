@@ -46,6 +46,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation";
 import { Country, City, ICountry, ICity } from 'country-state-city';
+import { Switch } from "@/components/ui/switch";
+
+
+const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
+const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
 
 
 const recruiterFormSchema = z.object({
@@ -60,6 +65,7 @@ const recruiterFormSchema = z.object({
   kraPinNo: z.string().min(1, "KRA PIN is required"),
   businessLine: z.string().min(1, "Business line is required"),
   specificRequirement: z.string().min(1, "Specific requirement is required"),
+  recruiterSelfHiringProcess: z.boolean().default(false),
 });
 
 const seekerFormSchema = z.object({
@@ -121,17 +127,71 @@ const RecruiterProfileForm = () => {
                 kraPinNo: userData.KRAPINNO,
                 businessLine: userData.BUSINESSLINE,
                 specificRequirement: userData.SPECIFICREQUIREMENT,
+                recruiterSelfHiringProcess: userData.SELFHIRING || false,
             });
         }
     }, [form]);
 
     async function onSubmit(values: z.infer<typeof recruiterFormSchema>) {
         setIsSubmitting(true);
-        console.log("Updating recruiter profile with:", values);
-        // In a real app, you would make an API call here.
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast({ title: "Success", description: "Profile updated successfully!" });
-        setIsSubmitting(false);
+        try {
+            const payload = {
+                RECRUITERID: Number(currentUser.RECRUITERID),
+                RECRUITERCOMPANYNAME: values.companyName,
+                RECRUITERCOUNTRY: values.country,
+                RECRUITERCITY: values.city,
+                RECRUITERPHYSICALADDRESS: values.physicalAddress,
+                RECRUITERPHYSICALGEOCOORDINATES: values.geoCoordinates || "",
+                RECRUITEREMAILADDRESS: currentUser.EMAILADDRESS,
+                RECRUITERMOBILENUMBER: values.mobileNumber,
+                RECRUITEROFFICENUMBER: values.officeNumber,
+                RECRUITERPOINTOFCONTACT: values.pointOfContact,
+                RECRUITERKRAPIN: values.kraPinNo,
+                RECRUITERBUSINESSLINE: values.businessLine,
+                RECRUITERSPECIFICREQUIREMENT: values.specificRequirement,
+                COMPANYKRAPINATTACHMENT: currentUser.KRAPIN,
+                COMPANYTAXCOMPLIANCEATTACHMENT: currentUser.COMPLIANCECERTIFICATE,
+                RECRUITERPASSWORD: currentUser.RECRUITERPASSWORD,
+                RECRUITERSELFHIRINGPROCESS: values.recruiterSelfHiringProcess ? 1 : 0,
+                SUCCESS_STATUS: "",
+                ERROR_STATUS: "",
+            };
+
+            const response = await axios.post(
+                `${BASEURL}/globalSpHandler?spname=197`,
+                payload,
+                { headers: { "session-token": BASEURL_SESSION_TOKEN } }
+            );
+
+            if (response.status === 201 && response?.data?.message === "Document Saved") {
+                toast({ title: "Success", description: "Profile updated successfully!" });
+                const updatedUser = { 
+                    ...currentUser,
+                    RECRUITERCOMPANYNAME: values.companyName,
+                    COUNTRY: values.country,
+                    CITY: values.city,
+                    PHYSICALADDRESS: values.physicalAddress,
+                    GEOCOORDINATES: values.geoCoordinates,
+                    MOBILENUMBER: values.mobileNumber,
+                    OFFICENUMBER: values.officeNumber,
+                    POINTOFCONTACT: values.pointOfContact,
+                    KRAPINNO: values.kraPinNo,
+                    BUSINESSLINE: values.businessLine,
+                    SPECIFICREQUIREMENT: values.specificRequirement,
+                    SELFHIRING: values.recruiterSelfHiringProcess
+                };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                setCurrentUser(updatedUser);
+            } else {
+                 toast({ title: "Update Failed", description: response.data.message || "An unknown error occurred.", variant: "destructive" });
+            }
+
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            toast({ title: "Error", description: "An unexpected error occurred while updating.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
     
     if (!currentUser) return <div>Loading profile...</div>
@@ -230,6 +290,29 @@ const RecruiterProfileForm = () => {
                         <FormMessage />
                     </FormItem>
                 )}/>
+
+                <FormField
+                    control={form.control}
+                    name="recruiterSelfHiringProcess"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                            Enable Self-Hiring Process (Subscription Model)
+                            </FormLabel>
+                            <p className="text-sm text-muted-foreground">
+                            Turn this on to manage your own recruitment. If off, GBS will handle candidate hunting and shortlisting for you.
+                            </p>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                />
 
                 <h3 className="text-lg font-semibold border-b pb-2 pt-4">Documents</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -842,5 +925,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
     

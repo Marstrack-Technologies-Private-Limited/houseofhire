@@ -22,11 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Loader2, FileSignature, Eye, Search, File } from "lucide-react";
-import { OfferLetterDialog } from "@/components/offer-letter-dialog";
+import { MoreHorizontal, Loader2, Eye, Search, File } from "lucide-react";
 import { format } from "date-fns";
 import { useSearchParams } from "next/navigation";
-import type { Candidate } from "@/lib/types";
 import { CandidateProfileDialog } from "@/components/candidate-profile-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,7 +50,6 @@ interface Application {
 export default function RecruiterApplicationsPage() {
   const [applications, setApplications] = React.useState<Application[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [selectedCandidate, setSelectedCandidate] = React.useState<Candidate | null>(null);
   const [viewingCandidateId, setViewingCandidateId] = React.useState<number | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const { toast } = useToast();
@@ -167,15 +164,6 @@ export default function RecruiterApplicationsPage() {
     "IN PROGRESS": "outline",
   };
 
-  const mapApplicationToCandidate = (app: Application): Candidate => ({
-      id: String(app.APPLICATIONNO),
-      name: app.JOBSEEKERNAME,
-      email: app.EMAILADDRESS,
-      jobTitle: app.DESIGNATION,
-      applicationDate: app.APPLIEDDATE,
-      status: app.STATUS as any,
-  })
-
   return (
     <>
       <div className="space-y-4">
@@ -281,9 +269,9 @@ export default function RecruiterApplicationsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setSelectedCandidate(mapApplicationToCandidate(app))}>
-                          <FileSignature className="mr-2 h-4 w-4" />
-                          Generate Offer Letter
+                        <DropdownMenuItem onClick={() => setViewingCandidateId(app.JOBSEEKERREGNO)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Profile
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Update Status</DropdownMenuLabel>
@@ -302,12 +290,6 @@ export default function RecruiterApplicationsPage() {
           </CardContent>
         </Card>
       </div>
-      {selectedCandidate && (
-        <OfferLetterDialog
-          candidate={selectedCandidate}
-          onClose={() => setSelectedCandidate(null)}
-        />
-      )}
        {viewingCandidateId && (
         <CandidateProfileDialog
           jobSeekerRegNo={viewingCandidateId}
