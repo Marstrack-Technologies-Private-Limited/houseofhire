@@ -54,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2">
             <Briefcase className="size-6 text-primary" />
-            <span className="text-lg font-semibold">CareerLink</span>
+            <span className="text-lg font-semibold">HouseOfHire</span>
           </Link>
         </SidebarHeader>
         <SidebarContent>
@@ -62,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter>
           <div className="text-xs text-muted-foreground p-2">
-            &copy; 2024 CareerLink
+            &copy; 2024 HouseOfHire
           </div>
         </SidebarFooter>
       </Sidebar>

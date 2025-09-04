@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { sendStatusUpdateEmailAction } from "@/actions/email-actions";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -115,12 +116,12 @@ export default function RecruiterApplicationsPage() {
     }
   }, [currentUser, fetchApplications]);
 
-  const handleUpdateStatus = async (applicationNo: number, status: string) => {
+  const handleUpdateStatus = async (application: Application, status: string) => {
      try {
       const response = await axios.post(
         `${BASEURL}/globalSpHandler?spname=253`,
         {
-          APPLICATIONNO: Number(applicationNo),
+          APPLICATIONNO: Number(application.APPLICATIONNO),
           STATUSOFAPPLICATION: status,
           STATUSNARRATION: `Status updated to ${status} by recruiter.`,
           UPDATEDBY: currentUser.RECRUITERID,
@@ -133,6 +134,25 @@ export default function RecruiterApplicationsPage() {
       if (response?.data?.message?.includes("Saved")) {
         toast({ title: "Success", description: `Status updated to ${status}` });
         fetchApplications(); 
+        
+        // Asynchronously send email notification. We don't block the UI for this.
+        sendStatusUpdateEmailAction({
+            candidateName: application.JOBSEEKERNAME,
+            candidateEmail: application.EMAILADDRESS,
+            companyName: currentUser.RECRUITERCOMPANYNAME,
+            jobTitle: application.DESIGNATION,
+            status: status,
+            applicationNo: application.APPLICATIONNO,
+        }).then(emailResult => {
+            if(emailResult.success) {
+                toast({ title: "Email Sent", description: "Candidate has been notified via email.", variant: "default" });
+            } else {
+                console.error("Failed to send status update email:", emailResult.message);
+                // Optionally show a non-blocking toast for email failure
+                toast({ title: "Email Notice", description: "Could not send status update email to candidate.", variant: "destructive" });
+            }
+        });
+
       } else {
          toast({ title: "Error", description: response?.data?.message || "Failed to update status", variant: "destructive" });
       }
@@ -275,10 +295,10 @@ export default function RecruiterApplicationsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Update Status</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus(app.APPLICATIONNO, 'IN PROGRESS')}>Mark as In Progress</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus(app.APPLICATIONNO, 'HOLD')}>Put on Hold</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus(app.APPLICATIONNO, 'ACCEPTED')} className="text-green-600">Accept</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus(app.APPLICATIONNO, 'REJECTED')} className="text-destructive">Reject</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(app, 'IN PROGRESS')}>Mark as In Progress</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(app, 'HOLD')}>Put on Hold</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(app, 'ACCEPTED')} className="text-green-600">Accept</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(app, 'REJECTED')} className="text-destructive">Reject</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

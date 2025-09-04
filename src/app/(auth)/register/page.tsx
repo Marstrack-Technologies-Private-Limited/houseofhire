@@ -17,7 +17,7 @@ export default function RegisterPage() {
       <CardHeader>
         <CardTitle className="text-2xl">Register</CardTitle>
         <CardDescription>
-          Create a new CareerLink account. Are you a job seeker or a recruiter?
+          Create a new HouseOfHire account. Are you a job seeker or a recruiter?
         </CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-4">

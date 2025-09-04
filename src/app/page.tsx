@@ -11,7 +11,7 @@ export default function Home() {
         <div className="container mx-auto flex h-14 items-center">
           <Link href="/" className="flex items-center space-x-2">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">CareerLink</span>
+            <span className="font-bold text-lg">HouseOfHire</span>
           </Link>
           <nav className="ml-auto flex items-center space-x-2">
             <ThemeToggle />
@@ -33,7 +33,7 @@ export default function Home() {
                 Find Your Dream Job Today
               </h1>
               <p className="mx-auto max-w-[700px] text-primary-foreground/80 md:text-xl">
-                CareerLink connects talented individuals with top companies. Your
+                HouseOfHire connects talented individuals with top companies. Your
                 next career move is just a click away.
               </p>
               <div className="space-x-4">
@@ -114,7 +114,7 @@ export default function Home() {
 
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
         <p className="text-xs text-muted-foreground">
-          &copy; 2024 CareerLink. All rights reserved.
+          &copy; 2024 HouseOfHire. All rights reserved.
         </p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link

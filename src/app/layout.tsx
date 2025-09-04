@@ -7,7 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'CareerLink - Your Next Career Move',
+  title: 'HouseOfHire - Your Next Career Move',
   description:
     'A modern job portal to connect job seekers and recruiters seamlessly.',
 };

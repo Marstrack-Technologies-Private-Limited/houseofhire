@@ -13,13 +13,13 @@ export const emailTemplate = (otp: number, name: string) => `
 </head>
 <body>
   <div class="container">
-    <div class="header">CareerLink Account Verification</div>
+    <div class="header">HouseOfHire Account Verification</div>
     <p>Hello ${name},</p>
-    <p>Thank you for registering with CareerLink. Please use the following One-Time Password (OTP) to verify your email address.</p>
+    <p>Thank you for registering with HouseOfHire. Please use the following One-Time Password (OTP) to verify your email address.</p>
     <div class="otp-code">${otp}</div>
     <p>This OTP is valid for 3 minutes. Please do not share this code with anyone.</p>
     <div class="footer">
-      <p>&copy; 2024 CareerLink. All rights reserved.</p>
+      <p>&copy; 2024 HouseOfHire. All rights reserved.</p>
     </div>
   </div>
 </body>

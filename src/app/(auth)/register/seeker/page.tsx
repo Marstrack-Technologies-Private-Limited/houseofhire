@@ -332,7 +332,7 @@ export default function SeekerRegisterPage() {
       <CardHeader>
         <CardTitle className="text-2xl">Job Seeker Registration</CardTitle>
         <CardDescription>
-          Fill in your details to create your CareerLink profile.
+          Fill in your details to create your HouseOfHire profile.
         </CardDescription>
       </CardHeader>
       <CardContent>

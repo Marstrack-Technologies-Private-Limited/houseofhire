@@ -15,7 +15,7 @@ export default function AuthLayout({
       <div className="absolute top-4 left-4">
         <Link href="/" className="flex items-center space-x-2 text-foreground">
           <Briefcase className="h-6 w-6" />
-          <span className="font-bold text-lg">CareerLink</span>
+          <span className="font-bold text-lg">HouseOfHire</span>
         </Link>
       </div>
       {children}
