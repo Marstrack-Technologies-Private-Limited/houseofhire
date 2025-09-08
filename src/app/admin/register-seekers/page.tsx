@@ -30,13 +30,10 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { OtpModal } from "@/components/otp-modal";
-import { emailTemplate } from "@/lib/email-template";
 import { useRouter } from "next/navigation";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
-const BASEURL_EMAIL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_EMAIL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
 
 
@@ -77,17 +74,12 @@ const formSchema = z.object({
 });
 
 
-export default function SeekerRegisterPage() {
+export default function RegisterSeekersPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [cities, setCities] = useState<ICity[]>([]);
-
-  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
-  const [otp, setOtp] = useState<number | null>(null);
-  const [enteredOtp, setEnteredOtp] = useState("");
-  const [isOtpVerifying, setIsOtpVerifying] = useState(false);
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -158,84 +150,6 @@ export default function SeekerRegisterPage() {
     }
   };
   
-  async function generateOTP(email: string, firstName: string, jobSeekerId: string | number) {
-    const newotp = Math.floor(1000 + Math.random() * 9000); 
-    setOtp(newotp);
-    setEnteredOtp("");
-    
-    console.log(newotp);
-    triggerEmail(email, firstName, newotp);
-    await saveOTP(String(jobSeekerId), newotp);
-    setIsOtpModalOpen(true);
-  };
-  
-  function triggerEmail(email: string, firstName: string, newotp: number) {
-    const mailData = {
-      formatType: "html",
-      message: emailTemplate(newotp, firstName),
-      subject: "Job Seeker Registration Verification",
-      to: email,
-    };
-
-    axios.post(`${BASEURL_EMAIL}/mail/triggerMail`, mailData)
-      .then(response => console.log(`Email sent to ${email}:`, response.data))
-      .catch(error => {
-        console.error(`Error sending email to ${email}:`, error);
-        toast({title: "Email Error", description: "Failed to send verification email.", variant: "destructive"});
-      });
-  }
-
-  async function saveOTP(jobSeekerRegNo: string, OTP: number) {
-    try {
-      const response = await axios.post(
-        `${BASEURL}/globalSpHandler?spname=1162`,
-        { JOBSEEKERREGNO: Number(jobSeekerRegNo), OTP: OTP, SUCCESS_STATUS: "", ERROR_STATUS: "" },
-        { headers: { "session-token": BASEURL_SESSION_TOKEN } }
-      );
-      if (response.status === 201) {
-        console.log("OTP Saved Successfully");
-      } else {
-        throw new Error("Failed to save OTP");
-      }
-    } catch (err) {
-      console.log("Error While Saving The OTP /saveOTP", err);
-      toast({title: "OTP Error", description: "Failed to save OTP for verification.", variant: "destructive"});
-    }
-  }
-
-  const handleOtpSubmit = async () => {
-      setIsOtpVerifying(true);
-      try {
-        const res = await axios.get(
-            `${BASEURL}/globalViewHandler?viewname=1154&JOBSEEKERREGNO=${form.getValues("jobSeekerId")}&OTP=${enteredOtp}`,
-            { headers: { "session-token": BASEURL_SESSION_TOKEN } }
-        );
-
-        if (res.data?.length > 0) {
-            const verificationResponse = await axios.post(
-                `${BASEURL}/globalSpHandler?spname=1164`,
-                { JOBSEEKERREGNO: Number(form.getValues("jobSeekerId")), SUCCESS_STATUS: "", ERROR_STATUS: "" },
-                { headers: { "session-token": BASEURL_SESSION_TOKEN } }
-            );
-
-            if (verificationResponse?.data?.message === "Document Saved") {
-                toast({ title: "Success", description: "OTP Verified. Registration complete." });
-                setIsOtpModalOpen(false);
-                router.push("/login");
-            } else {
-                 toast({ title: "Error", description: "Incorrect OTP. Please try again.", variant: "destructive" });
-            }
-        } else {
-            toast({ title: "Error", description: "Incorrect OTP. Please try again.", variant: "destructive" });
-        }
-    } catch (err) {
-        console.error("Error while verifying OTP", err);
-        toast({ title: "Error", description: "OTP Verification Failed.", variant: "destructive" });
-    } finally {
-        setIsOtpVerifying(false);
-    }
-  };
-
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -302,7 +216,7 @@ export default function SeekerRegisterPage() {
         INACTIVATEACCOUNT: 0,
         INACTIVATEREASON: "",
         INACTIVATEDATETIME: null,
-        GBSREGISTERED: 0,
+        GBSREGISTERED: 1, // Admin is registering
         SUCCESS_STATUS: "",
         ERROR_STATUS: "",
       };
@@ -314,8 +228,15 @@ export default function SeekerRegisterPage() {
       );
       
       if (response.status === 201 && response?.data?.message == "Document Saved") {
-        toast({ title: "Registration Successful", description: "Please verify your email to complete." });
-        await generateOTP(values.emailAddress, values.firstName, values.jobSeekerId);
+        toast({ title: "Registration Successful", description: "Job seeker has been registered." });
+        form.reset();
+        // Refetch new ID
+         axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
+            headers: { "session-token": BASEURL_SESSION_TOKEN },
+            })
+            .then((res) => {
+            form.setValue("jobSeekerId", res?.data[0]?.NEWJOBSEEKER);
+            })
       } else {
         toast({ title: "Registration Failed", description: response.data.message || "An error occurred.", variant: "destructive" });
       }
@@ -331,16 +252,15 @@ export default function SeekerRegisterPage() {
     <>
     <Card className="w-full max-w-4xl my-8">
       <CardHeader>
-        <CardTitle className="text-2xl">Job Seeker Registration</CardTitle>
+        <CardTitle className="text-2xl">Register a New Job Seeker</CardTitle>
         <CardDescription>
-          Fill in your details to create your HouseOfHire profile.
+          Fill in the details below to create a new job seeker profile on their behalf.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* Personal Details */}
             <h3 className="text-lg font-semibold border-b pb-2">Personal Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField
@@ -424,7 +344,6 @@ export default function SeekerRegisterPage() {
                 />
             </div>
             
-            {/* Contact Information */}
             <h3 className="text-lg font-semibold border-b pb-2 pt-4">Contact Information</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -508,7 +427,6 @@ export default function SeekerRegisterPage() {
                 />
             </div>
             
-            {/* Professional Details */}
             <h3 className="text-lg font-semibold border-b pb-2 pt-4">Professional Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FormField
@@ -592,7 +510,6 @@ export default function SeekerRegisterPage() {
 
             </div>
             
-            {/* Identification */}
             <h3 className="text-lg font-semibold border-b pb-2 pt-4">Identification</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
@@ -630,8 +547,8 @@ export default function SeekerRegisterPage() {
                 />
             </div>
             
-             {/* Security */}
             <h3 className="text-lg font-semibold border-b pb-2 pt-4">Security</h3>
+            <p className='text-sm text-muted-foreground'>Set a default password for the user. They can change it later from their profile.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                     control={form.control}
@@ -683,7 +600,6 @@ export default function SeekerRegisterPage() {
                 />
             </div>
 
-            {/* Attachments */}
             <h3 className="text-lg font-semibold border-b pb-2 pt-4">Attachments</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FormField control={form.control} name="photoAttachment" render={({ field }) => (
@@ -747,27 +663,7 @@ export default function SeekerRegisterPage() {
           </form>
         </Form>
       </CardContent>
-       <CardFooter className="flex-col items-center">
-        <div className="text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/login" className="underline">
-            Login
-          </Link>
-        </div>
-      </CardFooter>
     </Card>
-    <OtpModal 
-        isOpen={isOtpModalOpen}
-        onClose={() => setIsOtpModalOpen(false)}
-        onVerify={handleOtpSubmit}
-        otp={enteredOtp}
-        setOtp={setEnteredOtp}
-        isLoading={isOtpVerifying}
-    />
     </>
   );
 }
-
-    
-
-    

@@ -12,6 +12,7 @@ const applyJobSchema = z.object({
   coverLetter: z.string().url().optional(),
   cvAttached: z.string().url(),
   reasonFitForApplication: z.string().min(1, "Reason is required."),
+  gbsPosted: z.number().min(0).max(1),
 });
 
 type ApplyJobInput = z.infer<typeof applyJobSchema>;
@@ -36,7 +37,7 @@ export async function applyForJobAction(input: ApplyJobInput) {
     if (!validation.success) {
         return { success: false, message: "Invalid input." };
     }
-    const { requestNo, jobSeekerRegNo, coverLetter, cvAttached, reasonFitForApplication } = validation.data;
+    const { requestNo, jobSeekerRegNo, coverLetter, cvAttached, reasonFitForApplication, gbsPosted } = validation.data;
 
     try {
         // 1. Check if already applied
@@ -46,7 +47,7 @@ export async function applyForJobAction(input: ApplyJobInput) {
         );
 
         if (alreadyAppliedResponse.data?.length > 0) {
-            return { success: false, message: "You have already applied for this job!" };
+            return { success: false, message: "This user has already applied for this job!" };
         }
 
         // 2. Get new application number
@@ -67,6 +68,7 @@ export async function applyForJobAction(input: ApplyJobInput) {
             COVERLETTER: coverLetter || "",
             CVATTACHED: cvAttached,
             REASONFITFORAPPLICATION: reasonFitForApplication,
+            GBSPOSTED: gbsPosted,
             SUCCESS_STATUS: "",
             ERROR_STATUS: "",
         };

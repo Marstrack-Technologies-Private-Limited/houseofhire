@@ -65,6 +65,10 @@ const formSchema = z.object({
   termsAndConditions: z.string().min(1, "Please provide terms and conditions"),
 });
 
+interface JobTitle {
+    JOBTITLEID: number;
+    JOBTITLENAME: string;
+}
 
 export default function NewJobPage() {
   const { toast } = useToast();
@@ -73,6 +77,7 @@ export default function NewJobPage() {
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [cities, setCities] = useState<ICity[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,7 +124,21 @@ export default function NewJobPage() {
         });
     };
     
+    const getJobTitles = () => {
+         axios.get(`${BASEURL}/globalViewHandler?viewname=1171`, {
+          headers: { "session-token": BASEURL_SESSION_TOKEN },
+        })
+        .then((res) => {
+          setJobTitles(res.data);
+        })
+        .catch((err) => {
+          console.log("Error while fetching job titles", err);
+          toast({ title: "Error", description: "Could not fetch job titles.", variant: "destructive" });
+        });
+    }
+
     getNewRequestNo();
+    getJobTitles();
   }, [form, toast]);
 
    useEffect(() => {
@@ -241,9 +260,18 @@ export default function NewJobPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Job Title / Designation</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g. Senior Software Engineer" {...field} />
-                                </FormControl>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Select a job title" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {jobTitles.map(title => (
+                                            <SelectItem key={title.JOBTITLEID} value={title.JOBTITLENAME}>{title.JOBTITLENAME}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                                 </FormItem>
                             )}

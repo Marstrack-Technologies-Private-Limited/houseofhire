@@ -131,6 +131,13 @@ export default function Home() {
           >
             Privacy
           </Link>
+           <Link
+            href="/admin/login"
+            className="text-xs hover:underline underline-offset-4"
+            prefetch={false}
+          >
+            Admin Login
+          </Link>
         </nav>
       </footer>
     </div>

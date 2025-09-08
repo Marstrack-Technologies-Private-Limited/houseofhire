@@ -90,6 +90,7 @@ export function ApplyJobDialog({ job, jobSeekerRegNo, onClose, onApplySuccess }:
       cvAttached: cvUploadResult.url,
       coverLetter: coverLetterUrl,
       reasonFitForApplication: values.reasonFitForApplication,
+      gbsPosted: 0,
     };
 
     const result = await applyForJobAction(applicationInput);

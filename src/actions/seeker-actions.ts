@@ -56,6 +56,7 @@ export async function deactivateSeekerAccountAction(input: DeactivateAccountInpu
             PHOTOATTACHMENT: "",
             PASSWORD: "",
             CVATTACHMENT: "",
+            GBSREGISTERED: 0,
             SUCCESS_STATUS: "",
             ERROR_STATUS: "",
         };
@@ -149,6 +150,7 @@ export async function updateSeekerProfileAction(input: SeekerProfileUpdateInput)
             INACTIVATEACCOUNT: currentUser.INACTIVATEACCOUNT || 0,
             INACTIVATEREASON: currentUser.INACTIVATEREASON || "",
             INACTIVATEDATETIME: currentUser.INACTIVATEDATETIME || null,
+            GBSREGISTERED: currentUser.GBSREGISTERED || 0,
             SUCCESS_STATUS: "",
             ERROR_STATUS: "",
         };
