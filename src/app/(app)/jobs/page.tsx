@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, PlusCircle, Edit, Search } from "lucide-react";
+import { Loader2, PlusCircle, Edit, Search, Users, Briefcase, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
@@ -32,6 +32,9 @@ interface Job {
     REQUESTSTATUS: string;
     NARRATION: string;
     TYPEOFCONTRACT?: string;
+    EXPERIENCELEVEL: string;
+    JOBSEEKERCOUNT: number;
+    MINQUALIFICATION: string;
 }
 
 
@@ -126,23 +129,36 @@ export default function RecruiterJobsPage() {
             <Card key={`${job.REQUESTNO}-${index}`} className="flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                    <CardTitle>{job.DESIGNATION}</CardTitle>
-                    {job.TYPEOFCONTRACT && <Badge variant="outline">{job.TYPEOFCONTRACT}</Badge>}
+                    <CardTitle className="pr-4">{job.DESIGNATION}</CardTitle>
+                    <Badge variant={job.REQUESTSTATUS === 'Open' ? 'default' : 'secondary'}>{job.REQUESTSTATUS}</Badge>
                 </div>
                 <CardDescription>
                   {job.CITY}, {job.COUNTRY}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
-                <p><strong>Status:</strong> {job.REQUESTSTATUS}</p>
-                <p><strong>Deadline:</strong> {format(new Date(job.DEADLINEDATE), 'PPP')}</p>
-                 <div className="prose prose-sm dark:prose-invert max-w-none line-clamp-3" dangerouslySetInnerHTML={{ __html: job.NARRATION }} />
+              <CardContent className="flex-grow space-y-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" /> <span>{job.TYPEOFCONTRACT}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4" /> <span>{job.EXPERIENCELEVEL}</span>
+                </div>
+                 <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" /> <span>{job.JOBSEEKERCOUNT} Opening(s)</span>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground mb-1">Qualifications:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {job.MINQUALIFICATION?.split(',').map(q => q.trim() && <Badge key={q} variant="outline">{q.trim()}</Badge>)}
+                  </div>
+                </div>
+                 <p className="pt-2"><strong>Deadline:</strong> {format(new Date(job.DEADLINEDATE), 'PPP')}</p>
               </CardContent>
               <CardFooter className="flex gap-2">
                 <Button asChild className="w-full">
                   <Link href={`/applications?jobId=${job.REQUESTNO}`}>View Applications</Link>
                 </Button>
-                 <Button asChild variant="secondary">
+                 <Button asChild variant="secondary" size="icon">
                   <Link href={`/jobs/edit/${job.REQUESTNO}`}>
                     <Edit className="h-4 w-4" />
                     <span className="sr-only">Edit</span>

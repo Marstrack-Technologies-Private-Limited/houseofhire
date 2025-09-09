@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Edit, Loader2, PlusCircle } from 'lucide-react';
+import { Edit, Loader2, PlusCircle, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -85,6 +85,7 @@ export default function CreateJobTypesPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedJobTitle, setSelectedJobTitle] = useState<JobTitle | { JOBTITLEID: number | null, JOBTITLENAME: string } | null>(null);
     const { toast } = useToast();
+    const [search, setSearch] = useState("");
 
     const fetchJobTitles = useCallback(async () => {
         setIsLoading(true);
@@ -156,12 +157,18 @@ export default function CreateJobTypesPage() {
             setIsSaving(false);
         }
     };
+
+    const filteredJobTitles = useMemo(() => {
+        return jobTitles.filter(jobTitle => 
+            jobTitle.JOBTITLENAME.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [jobTitles, search]);
     
     return (
         <div>
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-wrap gap-4">
                         <div>
                             <CardTitle>Job Title Master</CardTitle>
                             <CardDescription>Manage job titles for job postings.</CardDescription>
@@ -169,6 +176,15 @@ export default function CreateJobTypesPage() {
                         <Button onClick={handleCreate}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Create New Job Title
                         </Button>
+                    </div>
+                     <div className="relative pt-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by job title name..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-10 max-w-sm"
+                        />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -186,7 +202,7 @@ export default function CreateJobTypesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {jobTitles.map((jobTitle) => (
+                            {filteredJobTitles.map((jobTitle) => (
                                 <TableRow key={jobTitle.JOBTITLEID}>
                                     <TableCell>{jobTitle.JOBTITLEID}</TableCell>
                                     <TableCell className="font-medium">{jobTitle.JOBTITLENAME}</TableCell>
@@ -200,7 +216,7 @@ export default function CreateJobTypesPage() {
                         </TableBody>
                     </Table>
                     )}
-                     {jobTitles.length === 0 && !isLoading && (
+                     {filteredJobTitles.length === 0 && !isLoading && (
                         <div className="text-center py-10 text-muted-foreground">
                             No job titles found.
                         </div>

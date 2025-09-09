@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Briefcase, Calendar, Clock, DollarSign, Globe, MapPin, Users } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface Job {
     REQUESTNO: number;
@@ -60,6 +61,8 @@ const DetailItem = ({ icon, label, value }: { icon: React.ElementType; label: st
 
 export function JobDetailsDialog({ job, onClose, onApplyNow }: JobDetailsDialogProps) {
     const isExpired = new Date(job.DEADLINEDATE) < new Date();
+    const pathname = usePathname();
+    const isAdminView = pathname.startsWith('/admin');
 
   return (
     <Dialog open={true} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -116,9 +119,11 @@ export function JobDetailsDialog({ job, onClose, onApplyNow }: JobDetailsDialogP
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={onApplyNow} disabled={isExpired}>
-            {isExpired ? "Deadline Passed" : "Apply Now"}
-          </Button>
+          {!isAdminView && (
+              <Button onClick={onApplyNow} disabled={isExpired}>
+                {isExpired ? "Deadline Passed" : "Apply Now"}
+              </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Edit, Loader2, PlusCircle } from 'lucide-react';
+import { Edit, Loader2, PlusCircle, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -85,6 +85,7 @@ export default function AssessmentMasterPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [selectedAssessment, setSelectedAssessment] = useState<Assessment | { ASSESSMENTID: number | null, ASSESSMENTNAME: string } | null>(null);
     const { toast } = useToast();
+    const [search, setSearch] = useState("");
 
     const fetchAssessments = useCallback(async () => {
         setIsLoading(true);
@@ -156,12 +157,18 @@ export default function AssessmentMasterPage() {
             setIsSaving(false);
         }
     };
+
+    const filteredAssessments = useMemo(() => {
+        return assessments.filter(assessment => 
+            assessment.ASSESSMENTNAME.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [assessments, search]);
     
     return (
         <div>
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-wrap gap-4">
                         <div>
                             <CardTitle>Assessment Master</CardTitle>
                             <CardDescription>Manage assessment types for job applications.</CardDescription>
@@ -169,6 +176,15 @@ export default function AssessmentMasterPage() {
                         <Button onClick={handleCreate}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Create New Assessment
                         </Button>
+                    </div>
+                    <div className="relative pt-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by assessment name..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-10 max-w-sm"
+                        />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -186,7 +202,7 @@ export default function AssessmentMasterPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {assessments.map((assessment) => (
+                            {filteredAssessments.map((assessment) => (
                                 <TableRow key={assessment.ASSESSMENTID}>
                                     <TableCell>{assessment.ASSESSMENTID}</TableCell>
                                     <TableCell className="font-medium">{assessment.ASSESSMENTNAME}</TableCell>
@@ -200,7 +216,7 @@ export default function AssessmentMasterPage() {
                         </TableBody>
                     </Table>
                     )}
-                     {assessments.length === 0 && !isLoading && (
+                     {filteredAssessments.length === 0 && !isLoading && (
                         <div className="text-center py-10 text-muted-foreground">
                             No assessments found.
                         </div>
