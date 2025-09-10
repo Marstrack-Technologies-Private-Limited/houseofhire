@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -170,7 +171,7 @@ export default function GbsApplicationsPage() {
                 <TableHead>Company</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Applied On</TableHead>
-                <TableHead className="text-right">CV</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -188,7 +189,7 @@ export default function GbsApplicationsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>{app.DATEOFAPPLICATION ? format(new Date(app.DATEOFAPPLICATION), "PPP") : 'N/A'}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
                     {app.CVATTACHED ? (
                       <Button asChild variant="ghost" size="icon">
                         <Link href={app.CVATTACHED} target="_blank">
@@ -196,9 +197,7 @@ export default function GbsApplicationsPage() {
                           <span className="sr-only">View CV</span>
                         </Link>
                       </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">N/A</span>
-                    )}
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}

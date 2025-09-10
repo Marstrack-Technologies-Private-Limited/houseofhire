@@ -28,10 +28,12 @@ const getPageTitle = (pathname: string): string => {
     if (pathname.startsWith('/admin/approve-seekers')) return "Approve Job Seekers";
     if (pathname.startsWith('/admin/job-openings')) return "Job Openings";
     if (pathname.startsWith('/admin/register-seekers')) return "Register Job Seekers";
+    if (pathname.startsWith('/admin/admin-registered-users')) return "Admin Registered Users";
     if (pathname.startsWith('/admin/apply-for-seeker')) return "Apply for Job Seeker";
-    if (pathname.startsWith('/admin/gbs-applications')) return "GBS Applications";
-    if (pathname.startsWith('/admin/interview-process')) return "Interview Process";
-    return "Admin";
+    if (pathname.startsWith('/admin/gbs-applications')) return "GBS Jobs Applied";
+    if (pathname.startsWith('/admin/new-interview')) return "New Interview";
+    if (pathname.startsWith('/admin/interview-conducted')) return "Conducted Interviews";
+    return "Admin Dashboard";
 };
 
 

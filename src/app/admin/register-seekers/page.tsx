@@ -25,12 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { format, isValid, parseISO } from 'date-fns';
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -61,13 +62,13 @@ const formSchema = z.object({
     maxQualification: z.string().min(1, "Maximum qualification is required"),
     experienceLevel: z.string().min(1, "Experience level is required"),
     lastCompanyLeftDate: z.string().min(1, "Last company left date is required"),
-    licenseAttachment: z.any().refine(file => file?.length == 1, "License attachment is required"),
-    nationalIdAttachment: z.any().refine(file => file?.length == 1, "National ID attachment is required"),
-    passportAttachment: z.any().refine(file => file?.length == 1, "Passport attachment is required"),
-    recommendationLetter: z.any().refine(file => file?.length == 1, "Recommendation letter is required"),
-    noObjectionCertificate: z.any().refine(file => file?.length == 1, "NOC is required"),
-    photoAttachment: z.any().refine(file => file?.length == 1, "Photo is required"),
-    cvAttachment: z.any().refine(file => file?.length == 1, "CV attachment is required"),
+    licenseAttachment: z.any().optional(),
+    nationalIdAttachment: z.any().optional(),
+    passportAttachment: z.any().optional(),
+    recommendationLetter: z.any().optional(),
+    noObjectionCertificate: z.any().optional(),
+    photoAttachment: z.any().optional(),
+    cvAttachment: z.any().optional(),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
@@ -77,17 +78,20 @@ const formSchema = z.object({
 export default function RegisterSeekersPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [cities, setCities] = useState<ICity[]>([]);
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        jobSeekerId: "",
         firstName: "",
         middleName: "",
         lastName: "",
@@ -97,7 +101,7 @@ export default function RegisterSeekersPage() {
         dob: "",
         nationality: "Kenyan",
         city: "",
-        countryOfResidence: "Kenya",
+        countryOfResidence: "KE",
         tribe: "",
         password: "",
         confirmPassword: "",
@@ -113,48 +117,99 @@ export default function RegisterSeekersPage() {
     },
   });
 
+  const resetFormWithUserData = useCallback((userData: any) => {
+        const dob = userData.DOB ? parseISO(userData.DOB) : null;
+        const leftDate = userData.LASTCOMPANYLEFTDATE ? parseISO(userData.LASTCOMPANYLEFTDATE) : null;
+        const countryData = Country.getAllCountries().find(c => c.name === userData.COUNTRYRESIDENCE);
+
+        form.reset({
+            jobSeekerId: userData.JOBSEEKERREGNO,
+            firstName: userData.JOBSEEKERNAME || "",
+            middleName: userData.MIDDLENAME || "",
+            lastName: userData.LASTNAME || "",
+            addressDetails: userData.ADDRESSDETAILS || "",
+            mobileNumber: userData.MOBILENO || "",
+            emailAddress: userData.EMAILADDRESS || "",
+            dob: dob && isValid(dob) ? format(dob, 'yyyy-MM-dd') : '',
+            nationality: userData.NATIONALITY || "",
+            countryOfResidence: countryData?.isoCode || "",
+            city: userData.CITY || "",
+            tribe: userData.TRIBE || "",
+            drivingLicenseNo: userData.LICENSENO || "",
+            nationalIdNumber: userData.NATIONALID || "",
+            passportNumber: userData.PASSPORTNO || "",
+            lastCompany: userData.PREVIOUSCOMPANY || "",
+            reasonOfLeaving: userData.REASONOFLEAVING || "",
+            specialization: userData.SPECIALIZATION || "",
+            maxQualification: userData.QUALIFICATION || "",
+            experienceLevel: userData.EXPERIENCELEVEL || "",
+            lastCompanyLeftDate: leftDate && isValid(leftDate) ? format(leftDate, 'yyyy-MM-dd') : '',
+            password: userData.PASSWORD || "",
+            confirmPassword: userData.PASSWORD || "",
+        });
+
+        if (countryData?.isoCode) {
+            setCities(City.getCitiesOfCountry(countryData.isoCode) || []);
+            form.setValue('city', userData.CITY || "");
+        } else {
+            setCities([]);
+        }
+  }, [form]);
+
+
   useEffect(() => {
     setCountries(Country.getAllCountries());
+    const seekerId = searchParams.get('id');
 
-    const getnewJobSeekerregno = () => {
-      axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
+    if (seekerId) {
+        setIsEditMode(true);
+        axios.get(`${BASEURL}/globalViewHandler?viewname=1154&JOBSEEKERREGNO=${seekerId}`, {
+          headers: { "session-token": BASEURL_SESSION_TOKEN },
+        })
+        .then(res => {
+            if (res.data && res.data.length > 0) {
+                const userData = res.data[0];
+                setCurrentUser(userData);
+                resetFormWithUserData(userData);
+            } else {
+                toast({ title: "Error", description: "Job seeker not found.", variant: "destructive" });
+                router.push("/admin/admin-registered-users");
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching seeker data:", err);
+            toast({ title: "Error", description: "Failed to fetch job seeker details.", variant: "destructive" });
+        })
+    } else {
+        setIsEditMode(false);
+        axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
           headers: { "session-token": BASEURL_SESSION_TOKEN },
         })
         .then((res) => {
           form.setValue("jobSeekerId", res?.data[0]?.NEWJOBSEEKER);
         })
         .catch((err) => {
-          console.log("Error while fetching /getnewJobSeekerregno", err);
-          toast({ title: "Error", description: "Could not fetch Job Seeker ID.", variant: "destructive" });
+          console.log("Error while fetching new job seeker ID", err);
+          toast({ title: "Error", description: "Could not fetch a new Job Seeker ID.", variant: "destructive" });
         });
-    };
-    
-    getnewJobSeekerregno();
-  }, [form, toast]);
+    }
 
-  useEffect(() => {
-      const kenya = Country.getAllCountries().find(c => c.name === "Kenya");
-      if(kenya) {
-          setCities(City.getCitiesOfCountry(kenya.isoCode) || []);
-          form.setValue('countryOfResidence', kenya.isoCode)
-      }
-  }, [form]);
+  }, [searchParams, toast, router, resetFormWithUserData, form]);
+
 
   const handleCountryChange = (countryIsoCode: string) => {
-    const country = countries.find(c => c.isoCode === countryIsoCode);
-    if (country) {
-        form.setValue("countryOfResidence", country.isoCode);
-        const countryCities = City.getCitiesOfCountry(country.isoCode);
-        setCities(countryCities || []);
-        form.setValue("city", "");
-    }
+    form.setValue("countryOfResidence", countryIsoCode);
+    const countryCities = City.getCitiesOfCountry(countryIsoCode);
+    setCities(countryCities || []);
+    form.setValue("city", "");
   };
   
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const uploadImage = async (file: File) => {
+      const uploadImage = async (file: File | undefined) => {
+        if (!file) return "";
         const formData = new FormData();
         formData.append("imageValue", file);
         const response = await axios.post(
@@ -174,19 +229,19 @@ export default function RegisterSeekersPage() {
         photoString,
         cvString,
       ] = await Promise.all([
-        uploadImage(values.licenseAttachment[0]),
-        uploadImage(values.nationalIdAttachment[0]),
-        uploadImage(values.passportAttachment[0]),
-        uploadImage(values.recommendationLetter[0]),
-        uploadImage(values.noObjectionCertificate[0]),
-        uploadImage(values.photoAttachment[0]),
-        uploadImage(values.cvAttachment[0]),
+        uploadImage(values.licenseAttachment?.[0]),
+        uploadImage(values.nationalIdAttachment?.[0]),
+        uploadImage(values.passportAttachment?.[0]),
+        uploadImage(values.recommendationLetter?.[0]),
+        uploadImage(values.noObjectionCertificate?.[0]),
+        uploadImage(values.photoAttachment?.[0]),
+        uploadImage(values.cvAttachment?.[0]),
       ]);
       
       const payload = {
         JOBSEEKERREGNO: Number(values.jobSeekerId),
         JOBSEEKERNAME: values.firstName,
-        MIDDLENAME: values.middleName,
+        MIDDLENAME: values.middleName || "",
         LASTNAME: values.lastName,
         ADDRESSDETAILS: values.addressDetails,
         MOBILENO: values.mobileNumber,
@@ -205,18 +260,18 @@ export default function RegisterSeekersPage() {
         LASTCOMPANYLEFTDATE: values.lastCompanyLeftDate,
         PREVIOUSCOMPANY: values.lastCompany,
         REASONOFLEAVING: values.reasonOfLeaving,
-        LICENSEATTACHMENT: licenseString,
-        NATIONAIDATTACHMENT: nationalIdString,
-        PASSPORTATTACHMENT: passportString,
-        RECOMMENDATIONLETTERATTACHMENT: recommendationString,
-        NOCATTACHMENT: nocString,
-        PHOTOATTACHMENT: photoString,
+        LICENSEATTACHMENT: licenseString || currentUser?.LICENSEATTACHMENT || "",
+        NATIONAIDATTACHMENT: nationalIdString || currentUser?.NATIONAIDATTACHMENT || "",
+        PASSPORTATTACHMENT: passportString || currentUser?.PASSPORTATTACHMENT || "",
+        RECOMMENDATIONLETTERATTACHMENT: recommendationString || currentUser?.RECOMMENDATIONLETTERATTACHMENT || "",
+        NOCATTACHMENT: nocString || currentUser?.NOCATTACHMENT || "",
+        PHOTOATTACHMENT: photoString || currentUser?.PHOTOATTACHMENT || "",
         PASSWORD: values.password,
-        CVATTACHMENT: cvString,
-        INACTIVATEACCOUNT: 0,
-        INACTIVATEREASON: "",
-        INACTIVATEDATETIME: null,
-        GBSREGISTERED: 1, // Admin is registering
+        CVATTACHMENT: cvString || currentUser?.OM_JOB_SEEKER_CV_ATTACHMENT || "",
+        INACTIVATEACCOUNT: currentUser?.OM_JOB_SEEKER_INACTIVATE || 0,
+        INACTIVATEREASON: currentUser?.OM_JOB_SEEKER_INACTIVATE_REASON || "",
+        INACTIVATEDATETIME: currentUser?.OM_JOB_SEEKER_INACTIVATE_DATETIME || null,
+        GBSREGISTERED: 1, // Admin is registering/editing
         SUCCESS_STATUS: "",
         ERROR_STATUS: "",
       };
@@ -228,17 +283,21 @@ export default function RegisterSeekersPage() {
       );
       
       if (response.status === 201 && response?.data?.message == "Document Saved") {
-        toast({ title: "Registration Successful", description: "Job seeker has been registered." });
-        form.reset();
-        // Refetch new ID
-         axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
-            headers: { "session-token": BASEURL_SESSION_TOKEN },
+        toast({ title: isEditMode ? "Update Successful" : "Registration Successful", description: `Job seeker has been ${isEditMode ? 'updated' : 'registered'}.` });
+        if (isEditMode) {
+            router.push('/admin/admin-registered-users');
+        } else {
+            form.reset();
+            // Refetch new ID
+            axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
+                headers: { "session-token": BASEURL_SESSION_TOKEN },
+                })
+                .then((res) => {
+                form.setValue("jobSeekerId", res?.data[0]?.NEWJOBSEEKER);
             })
-            .then((res) => {
-            form.setValue("jobSeekerId", res?.data[0]?.NEWJOBSEEKER);
-            })
+        }
       } else {
-        toast({ title: "Registration Failed", description: response.data.message || "An error occurred.", variant: "destructive" });
+        toast({ title: "Operation Failed", description: response.data.message || "An error occurred.", variant: "destructive" });
       }
     } catch (error) {
       console.error(error);
@@ -252,9 +311,9 @@ export default function RegisterSeekersPage() {
     <>
     <Card className="w-full max-w-4xl my-8">
       <CardHeader>
-        <CardTitle className="text-2xl">Register a New Job Seeker</CardTitle>
+        <CardTitle className="text-2xl">{isEditMode ? "Edit Job Seeker" : "Register a New Job Seeker"}</CardTitle>
         <CardDescription>
-          Fill in the details below to create a new job seeker profile on their behalf.
+          {isEditMode ? "Update the details for this job seeker." : "Fill in the details below to create a new job seeker profile on their behalf."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -387,7 +446,7 @@ export default function RegisterSeekersPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Country of Residence</FormLabel>
-                        <Select onValueChange={(value) => handleCountryChange(value)} defaultValue={field.value}>
+                        <Select onValueChange={handleCountryChange} value={field.value}>
                              <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a country" />
@@ -409,7 +468,7 @@ export default function RegisterSeekersPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>City</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <Select onValueChange={field.onChange} value={field.value}>
                              <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a city" />
@@ -457,7 +516,7 @@ export default function RegisterSeekersPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Experience Level</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select experience level" />
@@ -600,7 +659,7 @@ export default function RegisterSeekersPage() {
                 />
             </div>
 
-            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Attachments</h3>
+            <h3 className="text-lg font-semibold border-b pb-2 pt-4">Attachments {isEditMode && '(Leave blank to keep existing)'}</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FormField control={form.control} name="photoAttachment" render={({ field }) => (
                     <FormItem>
@@ -655,9 +714,9 @@ export default function RegisterSeekersPage() {
             
             <Button type="submit" className="w-full" disabled={isLoading}>
                  {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isEditMode ? "Saving Changes..." : "Creating Account..."}</>
                 ) : (
-                  "Create Job Seeker Account"
+                  isEditMode ? "Save Changes" : "Create Job Seeker Account"
                 )}
             </Button>
           </form>

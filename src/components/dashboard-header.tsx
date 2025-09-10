@@ -87,13 +87,15 @@ export function DashboardHeader({ pageTitle }: DashboardHeaderProps) {
                 <p className="text-xs text-muted-foreground font-normal">{user?.email || 'user@example.com'}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {user?.role !== 'admin' && (
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {user?.role !== 'admin' && <DropdownMenuSeparator />}
             <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
