@@ -18,6 +18,7 @@ import dynamic from 'next/dynamic';
 import { Separator } from '@/components/ui/separator';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { sendInterviewStatusEmailAction } from '@/actions/admin-email-actions';
 
 const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
@@ -52,6 +53,7 @@ interface Job {
 interface Application {
     JOBSEEKERREGNO: number;
     JOBSEEKERNAME: string;
+    EMAILADDRESS: string;
 }
 interface AssessmentMaster {
     ASSESSMENTID: number;
@@ -140,6 +142,7 @@ export default function NewInterviewPage() {
         setIsLoading(true);
         try {
             const selectedSeeker = applicants.find(a => String(a.JOBSEEKERREGNO) === values.jobSeekerId);
+            const selectedJob = jobs.find(j => String(j.REQUESTNO) === values.jobNo);
             
             const interviewPayload = {
                 INTERVIEWID: values.interviewId,
@@ -182,6 +185,17 @@ export default function NewInterviewPage() {
             }
 
              toast({ title: "Success", description: "Interview and assessments saved successfully." });
+             
+             if(selectedSeeker && selectedJob) {
+                sendInterviewStatusEmailAction({
+                    candidateName: selectedSeeker.JOBSEEKERNAME,
+                    candidateEmail: selectedSeeker.EMAILADDRESS,
+                    jobTitle: selectedJob.DESIGNATION,
+                    interviewRound: values.interviewRound,
+                    status: values.interviewStatus
+                });
+             }
+             
              router.push('/admin/interview-conducted');
 
         } catch (err) {

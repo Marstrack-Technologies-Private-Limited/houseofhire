@@ -2,6 +2,7 @@
 "use server";
 import axios from 'axios';
 import { z } from 'zod';
+import { sendAccountStatusEmailAction } from './admin-email-actions';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -12,6 +13,8 @@ const approveRejectSeekerSchema = z.object({
   action: z.enum(['approve', 'reject']),
   reason: z.string().optional(),
   adminUserCode: z.string(),
+  seekerName: z.string(),
+  seekerEmail: z.string().email(),
 });
 
 type ApproveRejectSeekerInput = z.infer<typeof approveRejectSeekerSchema>;
@@ -22,7 +25,7 @@ export async function approveRejectSeekerAction(input: ApproveRejectSeekerInput)
         return { success: false, message: "Invalid input." };
     }
     
-    const { jobSeekerRegNo, action, reason, adminUserCode } = validation.data;
+    const { jobSeekerRegNo, action, reason, adminUserCode, seekerEmail, seekerName } = validation.data;
 
     if (action === 'reject' && !reason) {
         return { success: false, message: "A reason is required for rejection." };
@@ -45,6 +48,14 @@ export async function approveRejectSeekerAction(input: ApproveRejectSeekerInput)
         );
         
         if (response.data?.message?.includes("Saved") || response.status === 201) {
+             // Asynchronously send email notification
+            sendAccountStatusEmailAction({
+                userName: seekerName,
+                userEmail: seekerEmail,
+                status: action,
+                userType: "seeker",
+                reason: reason || "",
+            });
             return { success: true, message: `Seeker ${action}d successfully.` };
         } else {
             return { success: false, message: response.data?.message || `Failed to ${action} seeker.` };
@@ -62,6 +73,8 @@ const approveRejectRecruiterSchema = z.object({
   action: z.enum(['approve', 'reject']),
   reason: z.string().optional(),
   adminUserCode: z.string(),
+  recruiterName: z.string(),
+  recruiterEmail: z.string().email(),
 });
 
 type ApproveRejectRecruiterInput = z.infer<typeof approveRejectRecruiterSchema>;
@@ -72,7 +85,7 @@ export async function approveRejectRecruiterAction(input: ApproveRejectRecruiter
         return { success: false, message: "Invalid input." };
     }
     
-    const { recruiterRegNo, action, reason, adminUserCode } = validation.data;
+    const { recruiterRegNo, action, reason, adminUserCode, recruiterEmail, recruiterName } = validation.data;
 
     if (action === 'reject' && !reason) {
         return { success: false, message: "A reason is required for rejection." };
@@ -95,6 +108,14 @@ export async function approveRejectRecruiterAction(input: ApproveRejectRecruiter
         );
         
         if (response.data?.message?.includes("Saved") || response.status === 201) {
+             // Asynchronously send email notification
+            sendAccountStatusEmailAction({
+                userName: recruiterName,
+                userEmail: recruiterEmail,
+                status: action,
+                userType: "recruiter",
+                reason: reason || "",
+            });
             return { success: true, message: `Recruiter ${action}d successfully.` };
         } else {
             return { success: false, message: response.data?.message || `Failed to ${action} recruiter.` };

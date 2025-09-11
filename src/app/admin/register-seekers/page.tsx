@@ -32,6 +32,8 @@ import { Country, City, ICity, ICountry } from "country-state-city";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, isValid, parseISO } from 'date-fns';
+import { sendGbsAccountCreationEmailAction } from "@/actions/admin-email-actions";
+import { encodePassword, decodePassword } from "@/lib/utils";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -121,6 +123,7 @@ export default function RegisterSeekersPage() {
         const dob = userData.DOB ? parseISO(userData.DOB) : null;
         const leftDate = userData.LASTCOMPANYLEFTDATE ? parseISO(userData.LASTCOMPANYLEFTDATE) : null;
         const countryData = Country.getAllCountries().find(c => c.name === userData.COUNTRYRESIDENCE);
+        const decodedPassword = userData.PASSWORD ? decodePassword(userData.PASSWORD) : "";
 
         form.reset({
             jobSeekerId: userData.JOBSEEKERREGNO,
@@ -144,8 +147,8 @@ export default function RegisterSeekersPage() {
             maxQualification: userData.QUALIFICATION || "",
             experienceLevel: userData.EXPERIENCELEVEL || "",
             lastCompanyLeftDate: leftDate && isValid(leftDate) ? format(leftDate, 'yyyy-MM-dd') : '',
-            password: userData.PASSWORD || "",
-            confirmPassword: userData.PASSWORD || "",
+            password: decodedPassword,
+            confirmPassword: decodedPassword,
         });
 
         if (countryData?.isoCode) {
@@ -266,7 +269,7 @@ export default function RegisterSeekersPage() {
         RECOMMENDATIONLETTERATTACHMENT: recommendationString || currentUser?.RECOMMENDATIONLETTERATTACHMENT || "",
         NOCATTACHMENT: nocString || currentUser?.NOCATTACHMENT || "",
         PHOTOATTACHMENT: photoString || currentUser?.PHOTOATTACHMENT || "",
-        PASSWORD: values.password,
+        PASSWORD: encodePassword(values.password),
         CVATTACHMENT: cvString || currentUser?.OM_JOB_SEEKER_CV_ATTACHMENT || "",
         INACTIVATEACCOUNT: currentUser?.OM_JOB_SEEKER_INACTIVATE || 0,
         INACTIVATEREASON: currentUser?.OM_JOB_SEEKER_INACTIVATE_REASON || "",
@@ -284,18 +287,25 @@ export default function RegisterSeekersPage() {
       
       if (response.status === 201 && response?.data?.message == "Document Saved") {
         toast({ title: isEditMode ? "Update Successful" : "Registration Successful", description: `Job seeker has been ${isEditMode ? 'updated' : 'registered'}.` });
-        if (isEditMode) {
-            router.push('/admin/admin-registered-users');
-        } else {
-            form.reset();
-            // Refetch new ID
-            axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
+        
+        if (!isEditMode) {
+             sendGbsAccountCreationEmailAction({
+                userName: values.firstName,
+                userEmail: values.emailAddress,
+                password: values.password
+             });
+             form.reset();
+             // Refetch new ID
+             axios.get(`${BASEURL}/globalViewHandler?viewname=1153`, {
                 headers: { "session-token": BASEURL_SESSION_TOKEN },
                 })
                 .then((res) => {
                 form.setValue("jobSeekerId", res?.data[0]?.NEWJOBSEEKER);
-            })
+             });
+        } else {
+            router.push('/admin/admin-registered-users');
         }
+
       } else {
         toast({ title: "Operation Failed", description: response.data.message || "An error occurred.", variant: "destructive" });
       }

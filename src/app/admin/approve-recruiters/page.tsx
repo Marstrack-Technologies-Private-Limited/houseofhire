@@ -170,7 +170,9 @@ export default function ApproveRecruitersPage() {
             recruiterRegNo: selectedRecruiter.RECRUITERID,
             action: actionType,
             reason: narration,
-            adminUserCode: adminUser.userCode
+            adminUserCode: adminUser.userCode,
+            recruiterEmail: selectedRecruiter.EMAILADDRESS,
+            recruiterName: selectedRecruiter.RECRUITERCOMPANYNAME
         });
 
         if (result.success) {

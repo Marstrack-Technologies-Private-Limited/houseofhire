@@ -34,6 +34,7 @@ import { OtpModal } from "@/components/otp-modal";
 import { emailTemplate } from "@/lib/email-template";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
+import { encodePassword } from "@/lib/utils";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -294,7 +295,7 @@ export default function RecruiterRegisterPage() {
           RECRUITERSPECIFICREQUIREMENT: values.specificRequirement,
           COMPANYKRAPINATTACHMENT: kraPinString,
           COMPANYTAXCOMPLIANCEATTACHMENT: taxCertificateString,
-          RECRUITERPASSWORD: values.password,
+          RECRUITERPASSWORD: encodePassword(values.password),
           RECRUITERSELFHIRINGPROCESS: values.recruiterSelfHiringProcess ? 1 : 0,
           SUCCESS_STATUS: "",
           ERROR_STATUS: "",

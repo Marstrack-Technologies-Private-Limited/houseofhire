@@ -42,13 +42,21 @@ export async function sendStatusUpdateEmailAction(input: EmailInput) {
     };
 
     try {
-        const response = await axios.post(`${BASEURL_EMAIL}/mail/triggerMail`, mailData);
-        console.log(`Status update email sent to ${candidateEmail}:`, response.data);
-        return { success: true, message: "Email sent successfully." };
+        axios.post(`${BASEURL_EMAIL}/mail/triggerMail`, mailData)
+            .then(response => {
+                console.log(`Status update email sent to ${candidateEmail}:`, response.data);
+            })
+            .catch(error => {
+                // We don't want to block the user, so we just log the error server-side
+                console.error("Failed to send status update email:", error);
+            });
+        
+        // Return success immediately, don't await the email
+        return { success: true, message: "Email sending process initiated." };
 
     } catch (error) {
-        console.error("Error sending status update email:", error);
-        // We are returning a success=false so the UI can be notified if needed.
-        return { success: false, message: "Failed to send status update email." };
+        console.error("Error initiating status update email:", error);
+        // This catch block might be for synchronous errors in setting up the axios post
+        return { success: false, message: "Failed to initiate status update email." };
     }
 }

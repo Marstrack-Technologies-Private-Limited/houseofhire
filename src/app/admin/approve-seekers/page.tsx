@@ -172,7 +172,9 @@ export default function ApproveSeekersPage() {
             jobSeekerRegNo: selectedSeeker.JOBSEEKERREGNO,
             action: actionType,
             reason: narration,
-            adminUserCode: adminUser.userCode
+            adminUserCode: adminUser.userCode,
+            seekerEmail: selectedSeeker.EMAILADDRESS,
+            seekerName: selectedSeeker.JOBSEEKERNAME
         });
 
         if (result.success) {
