@@ -47,7 +47,6 @@ import {
 import { useRouter } from "next/navigation";
 import { Country, City, ICountry, ICity } from 'country-state-city';
 import { Switch } from "@/components/ui/switch";
-import { encodePassword, decodePassword } from "@/lib/utils";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -926,6 +925,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-
-    

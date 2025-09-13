@@ -6,11 +6,14 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Edit, Loader2, PlusCircle, Search } from 'lucide-react';
+import { Edit, Loader2, PlusCircle, Search, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -163,19 +166,52 @@ export default function AssessmentMasterPage() {
             assessment.ASSESSMENTNAME.toLowerCase().includes(search.toLowerCase())
         );
     }, [assessments, search]);
+
+    const handleDownload = (format: 'pdf' | 'excel') => {
+        const doc = new jsPDF();
+        const tableHead = [['ID', 'Assessment Name']];
+        const tableBody = filteredAssessments.map(a => [a.ASSESSMENTID, a.ASSESSMENTNAME]);
+
+        if (format === 'pdf') {
+            const pageTitle = "Assessment Master";
+            const companyName = "House of Hire";
+            doc.setFontSize(16);
+            doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+            
+            autoTable(doc, {
+                head: tableHead,
+                body: tableBody,
+                startY: 30,
+            });
+            doc.save('assessment-master.pdf');
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(
+                filteredAssessments.map(a => ({ ID: a.ASSESSMENTID, Name: a.ASSESSMENTNAME }))
+            );
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Assessments");
+            XLSX.writeFile(workbook, 'assessment-master.xlsx');
+        }
+    };
     
     return (
         <div>
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center flex-wrap gap-4">
+                    <div className="flex justify-between items-start flex-wrap gap-4">
                         <div>
                             <CardTitle>Assessment Master</CardTitle>
                             <CardDescription>Manage assessment types for job applications.</CardDescription>
                         </div>
-                        <Button onClick={handleCreate}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Create New Assessment
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={handleCreate}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Create New Assessment
+                            </Button>
+                            <Button onClick={() => handleDownload('pdf')} variant="outline" size="sm"><FileDown className="mr-2" /> PDF</Button>
+                            <Button onClick={() => handleDownload('excel')} variant="outline" size="sm"><FileDown className="mr-2" /> Excel</Button>
+                        </div>
                     </div>
                     <div className="relative pt-4">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -236,3 +272,5 @@ export default function AssessmentMasterPage() {
         </div>
     );
 }
+
+    

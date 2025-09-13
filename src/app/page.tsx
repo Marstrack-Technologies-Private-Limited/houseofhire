@@ -1,7 +1,11 @@
+
+"use client";
+
+import * as React from "react";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Briefcase, FileText, Search, Users } from 'lucide-react';
+import { Briefcase, FileText, Search, Users, Activity, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -48,7 +52,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="features" className="w-full py-12 md:py-24 lg:py-32">
+        <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-muted/40">
           <div className="container mx-auto  px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">

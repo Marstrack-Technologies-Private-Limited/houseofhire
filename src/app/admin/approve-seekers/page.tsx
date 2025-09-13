@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Check, X, Loader2, Search } from 'lucide-react';
+import { Eye, Check, X, Loader2, Search, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,9 @@ import { approveRejectSeekerAction } from '@/actions/admin-actions';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Country, City, ICity, ICountry } from "country-state-city";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -190,12 +193,12 @@ export default function ApproveSeekersPage() {
 
     const getStatus = (seeker: JobSeeker) => {
         if (seeker.APPROVED) {
-            return <Badge variant="default">Approved</Badge>;
+            return "Approved";
         }
         if (seeker.CANCELLED) {
-            return <Badge variant="destructive">Rejected</Badge>;
+            return "Rejected";
         }
-        return <Badge variant="secondary">Pending</Badge>;
+        return "Pending";
     };
 
      const getStatusCode = (seeker: JobSeeker) => {
@@ -244,12 +247,63 @@ export default function ApproveSeekersPage() {
         setCities([]);
     }
 
+    const handleDownload = (format: 'pdf' | 'excel') => {
+        const doc = new jsPDF();
+        const tableHead = [['Name', 'Email', 'Specialization', 'Location', 'Applied Date', 'Status']];
+        const tableBody = filteredSeekers.map(s => [
+            s.JOBSEEKERNAME,
+            s.EMAILADDRESS,
+            s.SPECIALIZATION,
+            `${s.CITY}, ${s.COUNTRYRESIDENCE}`,
+            s.CREATEDDATE ? format(new Date(s.CREATEDDATE), 'PPP') : 'N/A',
+            getStatus(s)
+        ]);
+
+        if (format === 'pdf') {
+            const pageTitle = "Approve Job Seekers";
+            const companyName = "House of Hire";
+            doc.setFontSize(16);
+            doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+            autoTable(doc, {
+                head: tableHead,
+                body: tableBody,
+                startY: 30,
+            });
+            doc.save('approve-seekers.pdf');
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(
+                 filteredSeekers.map(s => ({
+                    Name: s.JOBSEEKERNAME,
+                    Email: s.EMAILADDRESS,
+                    Specialization: s.SPECIALIZATION,
+                    Location: `${s.CITY}, ${s.COUNTRYRESIDENCE}`,
+                    'Applied Date': s.CREATEDDATE ? format(new Date(s.CREATEDDATE), 'PPP') : 'N/A',
+                    Status: getStatus(s)
+                }))
+            );
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "JobSeekers");
+            XLSX.writeFile(workbook, 'approve-seekers.xlsx');
+        }
+    };
+
     return (
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle>Approve Job Seekers</CardTitle>
-                    <CardDescription>Review and manage new job seeker registrations.</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Approve Job Seekers</CardTitle>
+                            <CardDescription>Review and manage new job seeker registrations.</CardDescription>
+                        </div>
+                         <div className="flex gap-2">
+                             <Button onClick={() => handleDownload('pdf')} variant="outline" size="sm"><FileDown className="mr-2" /> PDF</Button>
+                             <Button onClick={() => handleDownload('excel')} variant="outline" size="sm"><FileDown className="mr-2" /> Excel</Button>
+                        </div>
+                    </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
                         <div className="relative lg:col-span-4">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -326,7 +380,7 @@ export default function ApproveSeekersPage() {
                                         <div className="text-sm text-muted-foreground">{seeker.COUNTRYRESIDENCE}</div>
                                     </TableCell>
                                     <TableCell>{seeker.CREATEDDATE ? format(new Date(seeker.CREATEDDATE), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell>{getStatus(seeker)}</TableCell>
+                                    <TableCell><Badge variant={getStatusCode(seeker) === 'approved' ? 'default' : getStatusCode(seeker) === 'rejected' ? 'destructive' : 'secondary'}>{getStatus(seeker)}</Badge></TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Button variant="ghost" size="icon" onClick={() => setViewingSeekerId(seeker.JOBSEEKERREGNO)}>
                                             <Eye className="h-4 w-4" />
@@ -374,3 +428,5 @@ export default function ApproveSeekersPage() {
         </>
     );
 }
+
+    

@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Eye, Loader2, Search, List, LayoutGrid, Star } from 'lucide-react';
+import { Eye, Loader2, Search, List, LayoutGrid, Star, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -172,6 +175,48 @@ export default function InterviewConductedPage() {
         });
     }, [interviews, search, statusFilter]);
 
+    const handleDownload = (formatType: 'pdf' | 'excel') => {
+        const doc = new jsPDF();
+        const tableHead = [['Candidate', 'Job', 'Date & Time', 'Round', 'Status']];
+        const tableBody = filteredInterviews.map(iv => [
+            iv.JOBSEEKERNAME,
+            iv.JOB_DESIGNATION,
+            `${format(parseISO(iv.INTERVIEWDATE), 'PPP')} ${format(parseISO(iv.INTERVIEWTIME), 'p')}`,
+            iv.ROUNDOFINTERVIEW,
+            iv.INTERVIEWSTATUS
+        ]);
+
+        if (formatType === 'pdf') {
+            const pageTitle = "Conducted Interviews";
+            const companyName = "House of Hire";
+            doc.setFontSize(16);
+            doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+            autoTable(doc, {
+                head: tableHead,
+                body: tableBody,
+                startY: 30,
+            });
+            doc.save('conducted-interviews.pdf');
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(
+                filteredInterviews.map(iv => ({
+                    'Candidate': iv.JOBSEEKERNAME,
+                    'Job': iv.JOB_DESIGNATION,
+                    'Date & Time': `${format(parseISO(iv.INTERVIEWDATE), 'PPP')} ${format(parseISO(iv.INTERVIEWTIME), 'p')}`,
+                    'Round': iv.ROUNDOFINTERVIEW,
+                    'Status': iv.INTERVIEWSTATUS
+                }))
+            );
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Interviews");
+            XLSX.writeFile(workbook, 'conducted-interviews.xlsx');
+        }
+    };
+
+
     return (
         <>
             <Card>
@@ -188,6 +233,8 @@ export default function InterviewConductedPage() {
                             <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('table')}>
                                 <List className="h-4 w-4" />
                             </Button>
+                             <Button onClick={() => handleDownload('pdf')} variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> PDF</Button>
+                             <Button onClick={() => handleDownload('excel')} variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> Excel</Button>
                         </div>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
@@ -284,3 +331,5 @@ export default function InterviewConductedPage() {
         </>
     );
 }
+
+    

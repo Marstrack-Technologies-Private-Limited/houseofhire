@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { encodePassword } from "@/lib/utils";
 
 
 const BASEURL_ADMIN = "https://devapi.tech23.net/global/login";
@@ -48,7 +47,7 @@ export default function AdminLoginPage() {
     try {
       const response = await axios.post(BASEURL_ADMIN, {
         email: email,
-        password: encodePassword(password),
+        password: password,
         MODULENAME: "RECRUITMENT",
       });
 

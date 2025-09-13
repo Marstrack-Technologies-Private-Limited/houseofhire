@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Search, List, LayoutGrid, Eye } from "lucide-react";
+import { Loader2, Search, List, LayoutGrid, Eye, FileDown } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { JobDetailsDialog } from "@/components/job-details-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Country, City, ICity, ICountry } from "country-state-city";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -168,6 +171,45 @@ export default function JobOpeningsPage() {
       setCities([]);
   }
 
+  const handleDownload = (formatType: 'pdf' | 'excel') => {
+        const doc = new jsPDF();
+        const tableHead = [['Job Title', 'Company', 'Location', 'Deadline']];
+        const tableBody = filteredJobs.map(j => [
+            j.DESIGNATION,
+            j.RECRUITERCOMPANYNAME,
+            `${j.CITY}, ${j.COUNTRY}`,
+            format(new Date(j.DEADLINEDATE), 'PPP')
+        ]);
+
+        if (formatType === 'pdf') {
+            const pageTitle = "Job Openings";
+            const companyName = "House of Hire";
+            doc.setFontSize(16);
+            doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+            autoTable(doc, {
+                head: tableHead,
+                body: tableBody,
+                 startY: 30,
+            });
+            doc.save('job-openings.pdf');
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(
+                filteredJobs.map(j => ({
+                    'Job Title': j.DESIGNATION,
+                    'Company': j.RECRUITERCOMPANYNAME,
+                    'Location': `${j.CITY}, ${j.COUNTRY}`,
+                    'Deadline': format(new Date(j.DEADLINEDATE), 'PPP')
+                }))
+            );
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "JobOpenings");
+            XLSX.writeFile(workbook, 'job-openings.xlsx');
+        }
+    };
+
   return (
     <>
     <div className="space-y-6">
@@ -178,7 +220,7 @@ export default function JobOpeningsPage() {
 
        <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                     <div>
                         <CardTitle>Filter Jobs</CardTitle>
                         <CardDescription>Use the filters below to find specific jobs.</CardDescription>
@@ -190,6 +232,8 @@ export default function JobOpeningsPage() {
                          <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('table')}>
                             <List className="h-4 w-4" />
                         </Button>
+                        <Button onClick={() => handleDownload('pdf')} variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> PDF</Button>
+                        <Button onClick={() => handleDownload('excel')} variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> Excel</Button>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
@@ -275,7 +319,7 @@ export default function JobOpeningsPage() {
             <Card key={`${job.REQUESTNO}-${index}`} className="flex flex-col">
               <CardHeader>
                 <CardTitle>{job.DESIGNATION}</CardTitle>
-                <CardDescription>{job.RECRUITERCOMPANYNAME} - {job.CITY}, {job.COUNTRY}</CardDescription>
+                <CardDescription>{job.RECRUITERCOMPANYNAME} &bull; {job.CITY}, {job.COUNTRY}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
                  <div className="prose prose-sm dark:prose-invert max-w-none line-clamp-4" dangerouslySetInnerHTML={{ __html: job.NARRATION }} />
@@ -328,3 +372,5 @@ export default function JobOpeningsPage() {
     </>
   );
 }
+
+    

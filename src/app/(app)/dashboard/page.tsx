@@ -72,8 +72,17 @@ const RecruiterDashboard = ({ currentUser }: { currentUser: any }) => {
         fetchData();
     }, [currentUser]);
     
+    const isApproved = currentUser?.APPROVED;
+
     return (
     <>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Welcome, {currentUser?.RECRUITERCOMPANYNAME}!</h1>
+        <Badge variant={isApproved ? "default" : "destructive"}>
+          {isApproved ? "Profile Verified" : "Profile Under Review"}
+        </Badge>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -214,12 +223,18 @@ const SeekerDashboard = ({ currentUser }: { currentUser: any }) => {
 
 
     const positiveReplies = applications.filter(a => ['IN PROGRESS', 'HOLD', 'ACCEPTED'].includes(a.STATUSOFAPPLICATION)).length;
+    const isApproved = currentUser?.APPROVED;
 
     return (
     <>
       <Card className="mb-8">
         <CardHeader>
+          <div className='flex justify-between items-center'>
             <CardTitle>Welcome Back, {currentUser?.JOBSEEKERNAME || 'User'}!</CardTitle>
+             <Badge variant={isApproved ? "default" : "destructive"}>
+              {isApproved ? "Profile Verified" : "Profile Under Review"}
+            </Badge>
+          </div>
             <CardDescription>Here&apos;s a summary of your job search activity.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">

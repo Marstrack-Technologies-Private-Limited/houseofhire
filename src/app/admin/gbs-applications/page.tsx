@@ -14,13 +14,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, File, Search } from "lucide-react";
+import { Loader2, File, Search, FileDown } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -42,6 +45,7 @@ export default function GbsApplicationsPage() {
   const [applications, setApplications] = React.useState<GbsApplication[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const { toast } = useToast();
+  const router = useRouter();
   
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -114,13 +118,64 @@ export default function GbsApplicationsPage() {
     "IN PROGRESS": "outline",
   };
 
+  const handleDownload = (formatType: 'pdf' | 'excel') => {
+        const doc = new jsPDF();
+        const tableHead = [['App#', 'Candidate', 'Job Title', 'Company', 'Status', 'Applied On']];
+        const tableBody = filteredApplications.map(app => [
+            app.APPLICATIONNO,
+            app.JOBSEEKERNAME,
+            app.DESIGNATION,
+            app.RECRUITERCOMPANYNAME,
+            app.STATUSOFAPPLICATION || 'Applied',
+            app.DATEOFAPPLICATION ? format(new Date(app.DATEOFAPPLICATION), "PPP") : 'N/A'
+        ]);
+
+        if (formatType === 'pdf') {
+            const pageTitle = "GBS-Submitted Applications";
+            const companyName = "House of Hire";
+            doc.setFontSize(16);
+            doc.text(companyName, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+            autoTable(doc, {
+                head: tableHead,
+                body: tableBody,
+                startY: 30,
+            });
+            doc.save('gbs-applications.pdf');
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(
+                filteredApplications.map(app => ({
+                    'Application #': app.APPLICATIONNO,
+                    'Candidate': app.JOBSEEKERNAME,
+                    'Job Title': app.DESIGNATION,
+                    'Company': app.RECRUITERCOMPANYNAME,
+                    'Status': app.STATUSOFAPPLICATION || 'Applied',
+                    'Applied On': app.DATEOFAPPLICATION ? format(new Date(app.DATEOFAPPLICATION), "PPP") : 'N/A'
+                }))
+            );
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "GBS Applications");
+            XLSX.writeFile(workbook, 'gbs-applications.xlsx');
+        }
+    };
+
   return (
     <>
       <div className="space-y-4">
         <Card>
             <CardHeader>
-                <CardTitle>GBS-Submitted Applications</CardTitle>
-                <CardDescription>Applications submitted by GBS administrators on behalf of job seekers.</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>GBS Jobs Applied</CardTitle>
+                        <CardDescription>Applications submitted by GBS administrators on behalf of job seekers.</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={() => handleDownload('pdf')} variant="outline" size="sm"><FileDown className="mr-2" /> PDF</Button>
+                        <Button onClick={() => handleDownload('excel')} variant="outline" size="sm"><FileDown className="mr-2" /> Excel</Button>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
                     <div className="relative lg:col-span-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -210,3 +265,5 @@ export default function GbsApplicationsPage() {
     </>
   );
 }
+
+    

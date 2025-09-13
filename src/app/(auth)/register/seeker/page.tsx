@@ -33,7 +33,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { OtpModal } from "@/components/otp-modal";
 import { emailTemplate } from "@/lib/email-template";
 import { useRouter } from "next/navigation";
-import { encodePassword } from "@/lib/utils";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -298,7 +297,7 @@ export default function SeekerRegisterPage() {
         RECOMMENDATIONLETTERATTACHMENT: recommendationString,
         NOCATTACHMENT: nocString,
         PHOTOATTACHMENT: photoString,
-        PASSWORD: encodePassword(values.password),
+        PASSWORD: values.password,
         CVATTACHMENT: cvString,
         INACTIVATEACCOUNT: 0,
         INACTIVATEREASON: "",
@@ -768,7 +767,3 @@ export default function SeekerRegisterPage() {
     </>
   );
 }
-
-    
-
-    

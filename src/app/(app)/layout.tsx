@@ -16,7 +16,7 @@ import {
 import type { UserRole } from "@/lib/types";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // Helper to get page title from pathname
 const getPageTitle = (pathname: string): string => {
@@ -32,15 +32,23 @@ const getPageTitle = (pathname: string): string => {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = React.useState<UserRole | null>(null);
+  const [user, setUser] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
         const userData = JSON.parse(storedUser);
         setRole(userData.role);
+        setUser(userData);
+
+        // Redirect unapproved users
+        if (!userData.APPROVED && pathname !== '/dashboard' && pathname !== '/profile') {
+          router.push('/dashboard');
+        }
     }
-  }, []);
+  }, [pathname, router]);
 
   const pageTitle = getPageTitle(pathname);
   

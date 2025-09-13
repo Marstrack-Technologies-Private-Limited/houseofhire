@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { encodePassword } from "@/lib/utils";
 
 
 const BASEURL_GLOBAL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -48,19 +47,17 @@ export default function LoginPage() {
     setIsLoading(true);
     setServerError("");
     
-    const encodedPassword = encodePassword(password);
-    
     try {
       let response;
       if (loginAs === "recruiter") {
         response = await axios.get(
-          `${BASEURL_GLOBAL}/globalViewHandler?viewname=521&EMAILADDRESS=${email}&RECRUITERPASSWORD=${encodedPassword}`, // &VERIFIED=true
+          `${BASEURL_GLOBAL}/globalViewHandler?viewname=521&EMAILADDRESS=${email}&RECRUITERPASSWORD=${password}`, // &VERIFIED=true
           { headers: { "session-token": BASEURL_SESSION_TOKEN } }
         );
       } else {
         // Default to Job Seeker
         response = await axios.get(
-          `${BASEURL_GLOBAL}/globalViewHandler?viewname=1154&EMAILADDRESS=${email}&PASSWORD=${encodedPassword}`, // &VERIFIED=true
+          `${BASEURL_GLOBAL}/globalViewHandler?viewname=1154&EMAILADDRESS=${email}&PASSWORD=${password}`, // &VERIFIED=true
           { headers: { "session-token": BASEURL_SESSION_TOKEN } }
         );
       }

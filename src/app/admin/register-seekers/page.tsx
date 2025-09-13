@@ -33,7 +33,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, isValid, parseISO } from 'date-fns';
 import { sendGbsAccountCreationEmailAction } from "@/actions/admin-email-actions";
-import { encodePassword, decodePassword } from "@/lib/utils";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -123,7 +122,6 @@ export default function RegisterSeekersPage() {
         const dob = userData.DOB ? parseISO(userData.DOB) : null;
         const leftDate = userData.LASTCOMPANYLEFTDATE ? parseISO(userData.LASTCOMPANYLEFTDATE) : null;
         const countryData = Country.getAllCountries().find(c => c.name === userData.COUNTRYRESIDENCE);
-        const decodedPassword = userData.PASSWORD ? decodePassword(userData.PASSWORD) : "";
 
         form.reset({
             jobSeekerId: userData.JOBSEEKERREGNO,
@@ -147,8 +145,8 @@ export default function RegisterSeekersPage() {
             maxQualification: userData.QUALIFICATION || "",
             experienceLevel: userData.EXPERIENCELEVEL || "",
             lastCompanyLeftDate: leftDate && isValid(leftDate) ? format(leftDate, 'yyyy-MM-dd') : '',
-            password: decodedPassword,
-            confirmPassword: decodedPassword,
+            password: userData.PASSWORD || "",
+            confirmPassword: userData.PASSWORD || "",
         });
 
         if (countryData?.isoCode) {
@@ -269,7 +267,7 @@ export default function RegisterSeekersPage() {
         RECOMMENDATIONLETTERATTACHMENT: recommendationString || currentUser?.RECOMMENDATIONLETTERATTACHMENT || "",
         NOCATTACHMENT: nocString || currentUser?.NOCATTACHMENT || "",
         PHOTOATTACHMENT: photoString || currentUser?.PHOTOATTACHMENT || "",
-        PASSWORD: encodePassword(values.password),
+        PASSWORD: values.password,
         CVATTACHMENT: cvString || currentUser?.OM_JOB_SEEKER_CV_ATTACHMENT || "",
         INACTIVATEACCOUNT: currentUser?.OM_JOB_SEEKER_INACTIVATE || 0,
         INACTIVATEREASON: currentUser?.OM_JOB_SEEKER_INACTIVATE_REASON || "",
