@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Search, List, LayoutGrid, Eye } from "lucide-react";
+import { Loader2, Search, List, LayoutGrid, Eye, Building } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { JobDetailsDialog } from "@/components/job-details-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Country, City, ICity, ICountry } from "country-state-city";
+import { RecruiterInfoDialog } from "@/components/recruiter-info-dialog";
 
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
@@ -66,6 +67,7 @@ export default function FindJobsPage() {
   const [cities, setCities] = useState<ICity[]>([]);
   const [countryFilter, setCountryFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
+  const [viewingRecruiterId, setViewingRecruiterId] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -305,13 +307,18 @@ export default function FindJobsPage() {
                     <Button variant="outline" className="w-full" onClick={() => setViewingJob(job)}>
                         <Eye className="mr-2 h-4 w-4" /> View Details
                     </Button>
+                    <Button variant="outline" className="w-full" onClick={() => setViewingRecruiterId(job.RECRUITERID)}>
+                        <Building className="mr-2 h-4 w-4" /> Company Info
+                    </Button>
+                 </div>
+                 <div className="flex w-full gap-2 items-center mt-2">
                     <Button variant="secondary" className="w-full" onClick={() => setIsTracking(job.REQUESTNO)}>
                         Track Application
                     </Button>
+                    <Button className="w-full" onClick={() => setSelectedJob(job)} disabled={isExpired}>
+                        {isExpired ? "Deadline Passed" : "Apply Now"}
+                    </Button>
                  </div>
-                 <Button className="w-full mt-2" onClick={() => setSelectedJob(job)} disabled={isExpired}>
-                    {isExpired ? "Deadline Passed" : "Apply Now"}
-                </Button>
               </CardFooter>
             </Card>
             )
@@ -336,7 +343,14 @@ export default function FindJobsPage() {
                             return(
                             <TableRow key={`${job.REQUESTNO}-${index}`}>
                                 <TableCell className="font-medium">{job.DESIGNATION}</TableCell>
-                                <TableCell>{job.RECRUITERCOMPANYNAME}</TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <span>{job.RECRUITERCOMPANYNAME}</span>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingRecruiterId(job.RECRUITERID)}>
+                                            <Building className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
                                 <TableCell>{job.CITY}, {job.COUNTRY}</TableCell>
                                 <TableCell>{format(new Date(job.DEADLINEDATE), 'PPP')}</TableCell>
                                 <TableCell className="text-right space-x-2">
@@ -369,6 +383,12 @@ export default function FindJobsPage() {
       )}
       {viewingJob && (
         <JobDetailsDialog job={viewingJob} onClose={() => setViewingJob(null)} onApplyNow={() => {setViewingJob(null); setSelectedJob(viewingJob)}} />
+      )}
+       {viewingRecruiterId && (
+        <RecruiterInfoDialog
+          recruiterId={viewingRecruiterId}
+          onClose={() => setViewingRecruiterId(null)}
+        />
       )}
     </>
   );

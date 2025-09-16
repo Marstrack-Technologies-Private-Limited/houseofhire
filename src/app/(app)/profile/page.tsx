@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Eye, EyeOff, Loader2, Badge } from "lucide-react";
 import axios from "axios";
 import { Separator } from "@/components/ui/separator";
@@ -47,7 +47,9 @@ import {
 import { useRouter } from "next/navigation";
 import { Country, City, ICountry, ICity } from 'country-state-city';
 import { Switch } from "@/components/ui/switch";
+import dynamic from "next/dynamic";
 
+const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_SESSION_TOKEN = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASE_SESSION_TOKEN;
@@ -66,6 +68,8 @@ const recruiterFormSchema = z.object({
   businessLine: z.string().min(1, "Business line is required"),
   specificRequirement: z.string().min(1, "Specific requirement is required"),
   recruiterSelfHiringProcess: z.boolean().default(false),
+  website: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
+  companyInformation: z.string().optional(),
 });
 
 const seekerFormSchema = z.object({
@@ -105,6 +109,11 @@ const RecruiterProfileForm = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
 
+     const joditConfig = useMemo(() => ({
+        readonly: false,
+        height: 300,
+    }), []);
+
     const form = useForm<z.infer<typeof recruiterFormSchema>>({
         resolver: zodResolver(recruiterFormSchema),
         defaultValues: {},
@@ -128,6 +137,8 @@ const RecruiterProfileForm = () => {
                 businessLine: userData.BUSINESSLINE,
                 specificRequirement: userData.SPECIFICREQUIREMENT,
                 recruiterSelfHiringProcess: userData.SELFHIRING || false,
+                website: userData.RECRUITERWEBSITE || "",
+                companyInformation: userData.RECRUITERCOMPANYINFORMATION || "",
             });
         }
     }, [form]);
@@ -153,6 +164,8 @@ const RecruiterProfileForm = () => {
                 COMPANYTAXCOMPLIANCEATTACHMENT: currentUser.COMPLIANCECERTIFICATE,
                 RECRUITERPASSWORD: currentUser.RECRUITERPASSWORD,
                 RECRUITERSELFHIRINGPROCESS: values.recruiterSelfHiringProcess ? 1 : 0,
+                RECRUITERWEBSITE: values.website || "",
+                RECRUITERCOMPANYINFORMATION: values.companyInformation || "",
                 SUCCESS_STATUS: "",
                 ERROR_STATUS: "",
             };
@@ -178,7 +191,9 @@ const RecruiterProfileForm = () => {
                     KRAPINNO: values.kraPinNo,
                     BUSINESSLINE: values.businessLine,
                     SPECIFICREQUIREMENT: values.specificRequirement,
-                    SELFHIRING: values.recruiterSelfHiringProcess
+                    SELFHIRING: values.recruiterSelfHiringProcess,
+                    RECRUITERWEBSITE: values.website,
+                    RECRUITERCOMPANYINFORMATION: values.companyInformation,
                 };
                 localStorage.setItem('user', JSON.stringify(updatedUser));
                 setCurrentUser(updatedUser);
@@ -212,6 +227,13 @@ const RecruiterProfileForm = () => {
                         <FormItem>
                         <FormLabel>Company Name</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}/>
+                     <FormField control={form.control} name="website" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl><Input type="url" placeholder="https://company.com" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}/>
@@ -249,7 +271,7 @@ const RecruiterProfileForm = () => {
                     )}/>
                     <FormField control={form.control} name="city" render={({ field }) => (
                         <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>City / Head Office</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
@@ -268,14 +290,14 @@ const RecruiterProfileForm = () => {
                         <FormMessage />
                         </FormItem>
                     )}/>
-                    <FormField control={form.control} name="businessLine" render={({ field }) => (
+                </div>
+                <FormField control={form.control} name="businessLine" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Business Line</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}/>
-                </div>
                 <FormField control={form.control} name="physicalAddress" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Physical Address</FormLabel>
@@ -290,6 +312,23 @@ const RecruiterProfileForm = () => {
                         <FormMessage />
                     </FormItem>
                 )}/>
+                 <FormField
+                    control={form.control}
+                    name="companyInformation"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>About The Company</FormLabel>
+                        <FormControl>
+                            <JoditEditor
+                                value={field.value ?? ""}
+                                config={joditConfig}
+                                onBlur={newContent => field.onChange(newContent)}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <FormField
                     control={form.control}

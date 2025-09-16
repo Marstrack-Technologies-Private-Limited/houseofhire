@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import axios from "axios";
 import { Country, City, ICity, ICountry } from "country-state-city";
@@ -34,7 +34,9 @@ import { OtpModal } from "@/components/otp-modal";
 import { emailTemplate } from "@/lib/email-template";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
+import dynamic from "next/dynamic";
 
+const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
 const BASEURL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_GLOBAL;
 const BASEURL_EMAIL = process.env.NEXT_PUBLIC_VITE_REACT_APP_BASEURL_EMAIL;
@@ -60,6 +62,8 @@ const formSchema = z.object({
     taxCertificateAttachment: z.any().refine(file => file?.length == 1, "Please Attach the Tax Certification"),
     geoCoordinates: z.string().optional(),
     recruiterSelfHiringProcess: z.boolean().default(false),
+    website: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
+    companyInformation: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
@@ -101,8 +105,15 @@ export default function RecruiterRegisterPage() {
       confirmPassword: "",
       geoCoordinates: "",
       recruiterSelfHiringProcess: false,
+      website: "",
+      companyInformation: "",
     },
   });
+
+  const joditConfig = useMemo(() => ({
+    readonly: false,
+    height: 300,
+  }), []);
 
   useEffect(() => {
     setCountries(Country.getAllCountries());
@@ -296,6 +307,8 @@ export default function RecruiterRegisterPage() {
           COMPANYTAXCOMPLIANCEATTACHMENT: taxCertificateString,
           RECRUITERPASSWORD: values.password,
           RECRUITERSELFHIRINGPROCESS: values.recruiterSelfHiringProcess ? 1 : 0,
+          RECRUITERWEBSITE: values.website || "",
+          RECRUITERCOMPANYINFORMATION: values.companyInformation || "",
           SUCCESS_STATUS: "",
           ERROR_STATUS: "",
       };
@@ -386,7 +399,7 @@ export default function RecruiterRegisterPage() {
                     name="city"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>City / Head Office</FormLabel>
                          <Select onValueChange={field.onChange} value={field.value}>
                              <FormControl>
                                 <SelectTrigger>
@@ -411,6 +424,19 @@ export default function RecruiterRegisterPage() {
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
                             <Input type="email" placeholder="contact@company.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                            <Input type="url" placeholder="https://company.com" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -529,6 +555,24 @@ export default function RecruiterRegisterPage() {
                         </FormItem>
                     )}
                 />
+
+             <FormField
+                control={form.control}
+                name="companyInformation"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>About The Company</FormLabel>
+                    <FormControl>
+                        <JoditEditor
+                            value={field.value ?? ""}
+                            config={joditConfig}
+                            onBlur={newContent => field.onChange(newContent)}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
             
             <FormField
                 control={form.control}
