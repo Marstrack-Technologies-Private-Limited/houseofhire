@@ -137,8 +137,8 @@ const RecruiterProfileForm = () => {
                 businessLine: userData.BUSINESSLINE,
                 specificRequirement: userData.SPECIFICREQUIREMENT,
                 recruiterSelfHiringProcess: userData.SELFHIRING || false,
-                website: userData.RECRUITERWEBSITE || "",
-                companyInformation: userData.RECRUITERCOMPANYINFORMATION || "",
+                website: userData.OM_RECRUITER_WEBSITE || "",
+                companyInformation: userData.OM_RECRUITER_COMPANY_INFORMATION || "",
             });
         }
     }, [form]);
@@ -192,8 +192,8 @@ const RecruiterProfileForm = () => {
                     BUSINESSLINE: values.businessLine,
                     SPECIFICREQUIREMENT: values.specificRequirement,
                     SELFHIRING: values.recruiterSelfHiringProcess,
-                    RECRUITERWEBSITE: values.website,
-                    RECRUITERCOMPANYINFORMATION: values.companyInformation,
+                    OM_RECRUITER_WEBSITE: values.website,
+                    OM_RECRUITER_COMPANY_INFORMATION: values.companyInformation,
                 };
                 localStorage.setItem('user', JSON.stringify(updatedUser));
                 setCurrentUser(updatedUser);
@@ -964,3 +964,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

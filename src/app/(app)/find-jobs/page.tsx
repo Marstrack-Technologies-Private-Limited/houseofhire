@@ -46,6 +46,8 @@ interface Job {
     TYPEOFCONTRACT: string;
     MINQUALIFICATION: string;
     TERMSANDCONDITIONS: string;
+    RECRUITERWEBSITE?: string;
+    COMPANYINFORMATION?: string;
 }
 
 export default function FindJobsPage() {
@@ -393,3 +395,5 @@ export default function FindJobsPage() {
     </>
   );
 }
+
+    

@@ -35,6 +35,8 @@ interface Job {
     TYPEOFCONTRACT: string;
     MINQUALIFICATION: string;
     TERMSANDCONDITIONS: string;
+    RECRUITERWEBSITE?: string;
+    COMPANYINFORMATION?: string;
 }
 
 interface JobDetailsDialogProps {
@@ -129,3 +131,5 @@ export function JobDetailsDialog({ job, onClose, onApplyNow }: JobDetailsDialogP
     </Dialog>
   );
 }
+
+    

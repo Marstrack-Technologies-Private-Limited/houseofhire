@@ -30,8 +30,8 @@ interface RecruiterInfo {
     RECRUITERCOMPANYNAME: string;
     COUNTRY: string;
     CITY: string;
-    RECRUITERWEBSITE?: string;
-    RECRUITERCOMPANYINFORMATION?: string;
+    OM_RECRUITER_WEBSITE?: string;
+    OM_RECRUITER_COMPANY_INFORMATION?: string;
 }
 
 const DetailItem = ({ icon, label, value }: { icon: React.ElementType, label: string, value: any }) => (
@@ -111,16 +111,16 @@ export function RecruiterInfoDialog({
                         <DetailItem icon={Building} label="Company Name" value={recruiterInfo.RECRUITERCOMPANYNAME} />
                         <DetailItem icon={MapPin} label="Head Office" value={`${recruiterInfo.CITY}, ${recruiterInfo.COUNTRY}`} />
                     </div>
-                     {recruiterInfo.RECRUITERWEBSITE && (
-                        <DetailItem icon={Globe} label="Website" value={<Link href={recruiterInfo.RECRUITERWEBSITE} target="_blank" className="text-primary hover:underline">{recruiterInfo.RECRUITERWEBSITE}</Link>} />
+                     {recruiterInfo.OM_RECRUITER_WEBSITE && (
+                        <DetailItem icon={Globe} label="Website" value={<Link href={recruiterInfo.OM_RECRUITER_WEBSITE} target="_blank" className="text-primary hover:underline">{recruiterInfo.OM_RECRUITER_WEBSITE}</Link>} />
                     )}
 
-                    {recruiterInfo.RECRUITERCOMPANYINFORMATION && (
+                    {recruiterInfo.OM_RECRUITER_COMPANY_INFORMATION && (
                          <div>
                             <h4 className="font-semibold text-lg mb-2">Company Information</h4>
                             <div 
                                 className="prose prose-sm dark:prose-invert max-w-none" 
-                                dangerouslySetInnerHTML={{ __html: recruiterInfo.RECRUITERCOMPANYINFORMATION }} 
+                                dangerouslySetInnerHTML={{ __html: recruiterInfo.OM_RECRUITER_COMPANY_INFORMATION }} 
                             />
                         </div>
                     )}
@@ -142,3 +142,5 @@ export function RecruiterInfoDialog({
     </Dialog>
   );
 }
+
+    
